@@ -31,6 +31,7 @@ from gepa.utils.stop_condition import (
     SignalStopper,
     TimeoutStopCondition,
 )
+from pydantic import BaseModel
 
 from .cache import ScoreCache
 from .config import DataConfig, EncoderConfig, LMConfig
@@ -116,27 +117,45 @@ class PoolRewardMetric:
         return ScoreWithFeedback(score=r["score"], feedback=feedback)
 
 
+# Per-hypothesis BOOLEAN checks. LLMs have no grounding for continuous 0-1 scores (they collapse
+# onto a few round anchors); a yes/no question is grounded. Granularity comes from the COUNT of
+# booleans satisfied across many hypotheses x criteria — a near-continuous fraction, not a float.
+_HYP_CRITERIA = ("semantic", "verifiable", "discriminative", "non_duplicate")
+
+
+class _HypCheck(BaseModel):
+    index: int
+    semantic: bool  # about the text's content/meaning, not surface form (length, punctuation, casing)
+    verifiable: bool  # a single self-contained claim checkable from one text alone
+    discriminative: bool  # plausibly separates some class(es); not vacuous / true of almost any text
+    non_duplicate: bool  # not a paraphrase or near-duplicate of another hypothesis in the set
+
+
 def make_judge(judge_lm):
-    """Pool judge: a numeric score AND an actionable critique. The critique is the
-    load-bearing part — it is fed to GEPA's reflection LM, which edits the instruction,
-    so it must name concrete pool weaknesses that imply instruction-level fixes.
+    """Boolean-rubric pool judge. Each hypothesis gets four yes/no checks and the set gets two;
+    the reward uses the FRACTION of checks that pass (grounded per-item booleans -> fine-grained
+    aggregate). The per-criterion failure counts + critique are fed to GEPA's reflection LM.
     Reasoning disabled (the caller passes a no-reasoning LM)."""
 
     class JudgePool(dspy.Signature):
-        """Rate a set of NLI hypotheses used as features for a text classifier, and critique it
-        so a prompt engineer could improve the GENERATOR'S INSTRUCTIONS (not this specific pool).
-        Score 0-1 how well the SET would separate the classes: semantic (about content, not
-        surface form), verifiable from one text alone, non-duplicated, covering all classes
-        including minorities, with varied specificity. Judge strictly."""
+        """Judge a set of NLI hypotheses used as features for a text classifier. For EACH
+        hypothesis (by index) answer four yes/no checks — semantic, verifiable, discriminative,
+        non_duplicate — judged strictly and INDEPENDENTLY; when in doubt answer false. Then two
+        set-level yes/no checks, and a critique aimed at improving the GENERATOR'S INSTRUCTIONS."""
 
         task: str = dspy.InputField()
         class_definitions: list[str] = dspy.InputField()
         hypotheses: list[str] = dspy.InputField()
-        score: float = dspy.OutputField(desc="0.0-1.0 overall set quality")
+        checks: list[_HypCheck] = dspy.OutputField(desc="exactly one entry per hypothesis, same order")
+        covers_all_classes: bool = dspy.OutputField(
+            desc="true if every class, including minority classes, has at least one hypothesis aimed at it"
+        )
+        varied_specificity: bool = dspy.OutputField(
+            desc="true if the set mixes broad and narrow hypotheses rather than one granularity"
+        )
         critique: str = dspy.OutputField(
-            desc="Actionable, specific: (1) quote the 2-3 weakest/redundant/surface-level "
-            "hypotheses and say why; (2) name class distinctions the set fails to cover; "
-            "(3) state the strategy change the GENERATOR should adopt to fix these. No class names."
+            desc="Actionable: quote the 2-3 weakest hypotheses, name class distinctions the set "
+            "misses, and state the strategy change the GENERATOR should adopt. No class names."
         )
 
     predict = dspy.Predict(JudgePool)
@@ -145,7 +164,21 @@ def make_judge(judge_lm):
     def judge(gold, pool):
         try:
             r = predict(task=gold.task, class_definitions=gold.class_definitions, hypotheses=pool)
-            return float(max(0.0, min(1.0, r.score))), (r.critique or "").strip()
+            checks = list(r.checks)[: len(pool)]
+            if not checks:
+                return 0.5, ""
+            passed = {c: sum(bool(getattr(ck, c)) for ck in checks) for c in _HYP_CRITERIA}
+            per_hyp = sum(passed.values()) / (
+                len(checks) * len(_HYP_CRITERIA)
+            )  # fraction of item-checks true
+            set_level = (bool(r.covers_all_classes) + bool(r.varied_specificity)) / 2.0
+            score = 0.85 * per_hyp + 0.15 * set_level
+            breakdown = ", ".join(f"{c} {passed[c]}/{len(checks)}" for c in _HYP_CRITERIA)
+            detail = (
+                f"judge booleans [{breakdown}; covers_all_classes={bool(r.covers_all_classes)}, "
+                f"varied_specificity={bool(r.varied_specificity)}]. {(r.critique or '').strip()}"
+            )
+            return score, detail
         except Exception:
             return 0.5, ""
 

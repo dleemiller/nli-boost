@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from threadpoolctl import threadpool_limits
 
@@ -35,11 +36,41 @@ class RewardConfig:
     cv_seeds: int = 3  # fold-seeds averaged to beat the ~0.003 CV noise floor
     cv_folds: int = 4
     cpu_threads: int = 4  # cap HGB's per-core OpenMP pool so it stays civil on a shared box
-    weights: dict = field(  # renormalized over the terms actually present
-        default_factory=lambda: {"cv_skill": 0.6, "diversity": 0.15, "anti_hack": 0.1, "judge": 0.15}
+    # Live, continuous terms only (anti_hack was always 1.0 -> now a penalty multiplier, not a
+    # weighted term). More discriminative terms => the reward separates near-identical pools
+    # instead of collapsing to a few values.
+    weights: dict = field(
+        default_factory=lambda: {
+            "cv_skill": 0.4,  # downstream CV accuracy above majority (primary target proxy)
+            "min_coverage": 0.2,  # worst-covered class's best single-hypothesis separation
+            "mean_coverage": 0.1,  # average per-class separation
+            "diversity": 0.15,  # effective rank / #hypotheses (independent directions)
+            "judge": 0.15,  # multi-dimensional LM rubric (averaged sub-scores)
+        }
     )
     length_corr_thresh: float = 0.5
     const_std_thresh: float = 0.02
+
+
+def _class_coverage(x_entail: np.ndarray, y: np.ndarray) -> tuple[float, float]:
+    """Per-class best single-hypothesis separation (one-vs-rest AUC, rescaled to [0,1]).
+    Continuous and discriminative where CV accuracy saturates; min rewards covering the
+    WORST class, mean rewards overall separability. Returns (min, mean)."""
+    classes = np.unique(y)
+    if len(classes) < 2 or x_entail.shape[1] == 0:
+        return 0.0, 0.0
+    per_class = []
+    for c in classes:
+        yc = (y == c).astype(int)
+        best = 0.5
+        for j in range(x_entail.shape[1]):
+            col = x_entail[:, j]
+            if np.std(col) < 1e-9:
+                continue
+            auc = roc_auc_score(yc, col)
+            best = max(best, auc, 1.0 - auc)
+        per_class.append(max(0.0, (best - 0.5) * 2.0))  # AUC [0.5,1] -> [0,1]
+    return float(np.min(per_class)), float(np.mean(per_class))
 
 
 def effective_rank(x: np.ndarray) -> float:
@@ -99,20 +130,34 @@ def pool_reward(
     cv_skill, cv_acc, cv_noise = _cv_skill(x, y, cfg)
     eff = effective_rank(x_entail)
     diversity = eff / max(1, m)
-    anti_hack, n_len, n_const = _anti_hack(x_entail, texts, cfg)
+    min_cov, mean_cov = _class_coverage(x_entail, y)
+    anti_hack, n_len, n_const = _anti_hack(x_entail, texts, cfg)  # penalty multiplier, not a term
 
-    components = {"cv_skill": cv_skill, "diversity": diversity, "anti_hack": anti_hack}
+    components = {
+        "cv_skill": cv_skill,
+        "min_coverage": min_cov,
+        "mean_coverage": mean_cov,
+        "diversity": diversity,
+    }
     if judge_score is not None:
         components["judge"] = float(judge_score)
 
     w = {k: cfg.weights[k] for k in components}
     wsum = sum(w.values()) or 1.0
-    score = sum(components[k] * w[k] for k in components) / wsum
+    base = sum(components[k] * w[k] for k in components) / wsum
+    score = base * anti_hack  # anti_hack is 1.0 unless real artifacts appear, then it bites
 
     feedback = (
         f"Pool of {m} hypotheses. Held-out CV accuracy {cv_acc:.4f} "
         f"(skill above majority {cv_skill:.3f}, cross-seed noise +/-{cv_noise:.4f}). "
-        f"Effective rank {eff:.1f}/{m} (diversity {diversity:.2f}) — "
+        f"Per-class separation: worst class {min_cov:.2f}, average {mean_cov:.2f} (0=none, 1=perfect) — "
+        + (
+            f"the weakest class is poorly covered ({min_cov:.2f}); add hypotheses that isolate the "
+            "hardest-to-separate class. "
+            if min_cov < 0.5
+            else "every class has at least one strong separator. "
+        )
+        + f"Effective rank {eff:.1f}/{m} (diversity {diversity:.2f}) — "
         + (
             "LOW: the pool is collapsing onto a few directions; write hypotheses from more "
             "independent angles (entities, intent, syntax, topic), not paraphrases. "
@@ -129,8 +174,11 @@ def pool_reward(
     return {
         "score": round(score, 4),
         "components": {k: round(v, 4) for k, v in components.items()},
+        "anti_hack_penalty": round(anti_hack, 4),
         "cv_accuracy": round(cv_acc, 4),
         "cv_noise": round(cv_noise, 4),
+        "min_coverage": round(min_cov, 4),
+        "mean_coverage": round(mean_cov, 4),
         "effective_rank": round(eff, 2),
         "n_length_artifacts": n_len,
         "n_vacuous": n_const,

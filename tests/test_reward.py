@@ -48,4 +48,20 @@ def test_reward_flags_length_artifact():
     x = np.hstack([ent, 1 - ent])
     r = pool_reward(x, y, ["hypothesis 0"], texts, RewardConfig(cv_seeds=2))
     assert r["n_length_artifacts"] == 1
-    assert r["components"]["anti_hack"] < 1.0
+    assert r["anti_hack_penalty"] < 1.0  # a length-tracking pool is penalized
+
+
+def test_reward_coverage_terms_present_and_ordered():
+    rng = np.random.default_rng(2)
+    n, m = 300, 4
+    y = (rng.random(n) > 0.5).astype(int)
+    # a pool that separates the classes should score higher coverage than pure noise
+    ent_sig = np.column_stack([y * 0.6 + 0.2 + 0.1 * rng.random(n) for _ in range(m)])
+    ent_noise = rng.random((n, m))
+    cfg = RewardConfig(cv_seeds=2)
+    r_sig = pool_reward(np.hstack([ent_sig, 1 - ent_sig]), y, [f"h{i}" for i in range(m)], ["t"] * n, cfg)
+    r_noise = pool_reward(
+        np.hstack([ent_noise, 1 - ent_noise]), y, [f"h{i}" for i in range(m)], ["t"] * n, cfg
+    )
+    assert 0.0 <= r_sig["min_coverage"] <= 1.0 and 0.0 <= r_sig["mean_coverage"] <= 1.0
+    assert r_sig["min_coverage"] > r_noise["min_coverage"]  # signal covers classes; noise does not
