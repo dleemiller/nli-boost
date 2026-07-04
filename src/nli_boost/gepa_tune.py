@@ -176,7 +176,10 @@ def optimize_instruction(
 
     baseline = _baseline_scores(examples, bundles, scorer, metric, student_lm)
 
-    log_dir = out_path.parent / "gepa_logs"
+    # per-instruction checkpoint dir (NOT the shared models/gepa_logs, which holds the
+    # stale pre-rewrite tree-GEPA state — resuming from that would load an incompatible
+    # program). Same command re-runs resume from here; a fresh out_path starts clean.
+    log_dir = out_path.parent / f"{out_path.stem}_gepa_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     stop_file = out_path.with_suffix(".stop")
     # stop on whichever fires first; all return the best-so-far. MaxMetricCallsStopper
