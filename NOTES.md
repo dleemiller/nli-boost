@@ -47,6 +47,15 @@ explicit "classes still mixed: X vs Y" phrasing.
 
 ## Reviews
 
+### 2026-07-04 — GEPA run status (in flight, hourly check)
+
+Light-scale run live and healthy (~154/700 calls, 22 min, 149% CPU — thread cap holding,
+checkpoint + WAL fresh). The 40-call probe was budget-starved (only 2 distinct instructions
+explored); at 700 calls it is genuinely searching — 5 distinct rewards/dataset, best paired
+geo-mean **0.77 vs 0.744 baseline (+0.026)**, clearing the pre-registered +0.01 reward bar.
+NOT yet judged: pairing is adjacency-approximate, gain is on the tuning sets (trec+sst2), and
+adoption still requires the -l McNemar transfer gate on held-out ag_news. Verdict when it lands.
+
 ### 2026-07-04 — GEPA instruction tuning, redesigned + PRE-REGISTERED (feasibility probe)
 
 Rebuilt GEPA around the committed pool method (the first attempt was for the tree proposer and
