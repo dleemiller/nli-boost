@@ -88,6 +88,11 @@ for round in range(6):                                          # cap; patience 
 # STAGE 3 — HEAD, chosen honestly  (the systemic overfitting fix: +2 pts)
 # ============================================================================
 X_train = features(D_train, pool)              # P(entail) + P(contradict) per hypothesis
+if lexical.kind != "none":                     # OPTIONAL lexical channel (when macro-F1 matters):
+    X_train += tfidf_svd(D_train, dims=128)    # fit on TRAIN ONLY, concat at head stage only.
+                                               # Measured: acc within noise (−0.2 TREC, +0.8 AGN)
+                                               # but macro-F1 +1.4/+0.7 — helps rare classes.
+                                               # wordllama variant dominated by tfidf on short texts.
 head = argmax_over_grid(                       # RF / HistGBM x regularization settings
     cv_accuracy(model, X_train, y_train, folds=4)   # CV ON TRAIN ONLY.
 )                                              # never pick the head by val or test —
@@ -120,6 +125,7 @@ head_l = cv_selected_head(X_l);  report_once(test)
 | training data (2k→4.4k) | +2.4 | bounded by dataset |
 | CV-selected head (vs fixed defaults) | +2 | in the method |
 | honest reporting (vs best-head-on-test) | −2.2 of illusion | in the method |
+| lexical channel (TF-IDF→SVD concat at head) | ~0 acc, **+0.7–1.4 macro-F1** | optional — when rare classes matter |
 | multi-pool / multi-encoder ensembling | untested, est. +0.5–1.5 | next candidates |
 
 ## Results under this method (TREC-6, 2k train, seeds 7/17)

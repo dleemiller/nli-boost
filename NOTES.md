@@ -47,6 +47,37 @@ explicit "classes still mixed: X vs Y" phrasing.
 
 ## Reviews
 
+### 2026-07-04 — lexical verdicts: tfidf mixed (F1 +1.4), wordllama dominated
+
+- trec_lex_wordllama: 0.9100 / F1 0.8895 — worse than tfidf_svd on every axis. Mechanism:
+  TREC's signal is specific short-question vocabulary, which TF-IDF keeps sharp and pooled
+  static embeddings blur. Dropped for short-text datasets; may deserve a retry on 20NG
+  (long documents) if the channel survives at all.
+- Adoption rule status: neither variant clears ≥ +1 accuracy. tfidf's +1.4 F1 / +1.0 cv_train
+  earns the AG News check (running, frozen pool, LM-free): if F1 gain replicates there, the
+  channel becomes a "when macro-F1 matters" option in METHOD.md rather than a default.
+
+### 2026-07-04 — lexical channel CLOSED: F1 option, not an accuracy lever
+
+- **ag_news_lex: pool_cv 0.8985 / F1 0.8985 vs baseline 0.8910 / 0.8911** (+0.75 acc, +0.74 F1,
+  cv_train 0.8965 vs 0.8935 — CV predicted the gain honestly). Notable: the first thing to move
+  the AG News number past the presumed 0.890 label-noise wall, though still under the +1 pt bar.
+- **Verdict across both datasets:** adoption rule (≥ +1 pt accuracy on 2+) FAILS (−0.2 TREC,
+  +0.75 AGN). But the macro-F1 gain REPLICATES (+1.4 TREC, +0.74 AGN) and cv_train rose on both —
+  per the registered follow-up, tfidf_svd enters METHOD.md as an *optional* channel "when
+  macro-F1 / rare classes matter", not a default. wordllama dropped for short texts (dominated
+  by tfidf on every axis: 0.9100/0.8895 on TREC); possible retry only on 20NG long docs.
+- Cost of the option: ~0 (sklearn fit, no LM, no encoder pairs). Question closed; follow-up
+  ideas (wordllama clustering, lexical-aware evolution folds) YAGNI'd unless a dataset demands it.
+
+### 2026-07-04 review #47 (cron) — first lexical verdict
+
+- **trec_lex_tfidf_svd: pool_cv 0.9180 / F1 0.8965 vs baseline 0.9200 / 0.8822** — accuracy in
+  the "subsumed" band (−0.2, noise), but macro-F1 +1.4 and cv_train +1.0 (0.888 vs 0.878): the
+  lexical channel helps rare classes and the honest CV estimate without moving headline
+  accuracy. Mixed — per the adoption rule (≥ +1 pt accuracy) this does NOT qualify, but the F1
+  gain earns the AG News/SST-2 check before closing the question. wordllama variant running.
+
 ### 2026-07-04 — lexical channel experiments (Lee's idea), pre-registered
 
 Static lexical features concatenated with hypothesis features at the head stage (flag-gated,
