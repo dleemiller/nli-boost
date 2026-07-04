@@ -19,7 +19,6 @@ one thread touches the GPU; CV is serial (n_jobs=1); GEPA runs few threads.
 """
 
 import json
-import threading
 from pathlib import Path
 
 import dspy
@@ -68,8 +67,9 @@ def build_contexts(specs, pool_size, sub_size, seed, n_subsamples=1):
 class PoolRewardMetric:
     """GEPA metric: generate -> score on the frozen subsample -> composite reward.
 
-    GPU scoring is serialized by a lock; the encoder is not thread-safe and the
-    shared GPU must not be hammered by concurrent metric threads."""
+    Runs concurrently across GEPA's worker threads (num_threads): LLM generate/judge and
+    GPU scoring all overlap. The score cache is internally thread-locked; GPU inference runs
+    concurrently (fine on this box)."""
 
     def __init__(self, scorer, bundles, reward_cfg=None, judge=None, eval_log=None):
         self.scorer = scorer
@@ -77,7 +77,6 @@ class PoolRewardMetric:
         self.reward_cfg = reward_cfg or RewardConfig()
         self.judge = judge
         self.eval_log = eval_log
-        self._gpu = threading.Lock()
 
     def __call__(self, gold, pred, trace=None, pred_name=None, pred_trace=None):
         bundle = self.bundles[(gold.dataset, gold.seed)]
@@ -94,12 +93,8 @@ class PoolRewardMetric:
         if not pool:
             return ScoreWithFeedback(score=0.0, feedback="No usable hypotheses were produced.")
 
-        # Judge FIRST, outside the GPU lock: it's an LLM call needing only the hypothesis text, so
-        # the 8 worker threads issue judge requests CONCURRENTLY. (Before, each thread had to take
-        # its turn at the GPU lock before reaching the judge, which serialized the LLM requests.)
         judge_score, judge_critique = self.judge(gold, pool) if self.judge else (None, "")
-        with self._gpu:
-            x = self.scorer.features(texts, pool)  # cache-through; GPU only on misses
+        x = self.scorer.features(texts, pool)  # cache-through; GPU on misses (runs concurrently)
         r = pool_reward(x, y, pool, texts, self.reward_cfg, judge_score=judge_score)
         feedback = f"[{gold.dataset}] {r['feedback']}"
         if judge_critique:  # the judge's SEMANTIC critique is the actionable signal for reflection
