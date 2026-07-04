@@ -93,6 +93,15 @@ Two fixes committed as a result:
    run also carries the improved judge feedback, so a clean teacher ablation would re-run deepseek
    under the new feedback too; deferring that unless GLM's result is ambiguous.
 
+### 2026-07-04 — GEPA run >1h (hourly check): auto='light' scales with valset
+
+Run healthy and live at 1h02m / 357 evals (~4/min sustained; wal + evals fresh). Longer than
+"light" suggests because auto='light' budget scales with valset size, and I set valset=30 — so a
+bigger validation pool makes "light" not-light. Tradeoff noted: if faster iteration is wanted,
+shrink valset (e.g. 16) or the whole thing scales down. Not stopping it (Lee's run, progressing).
+Verdict (reward vs new-scale baseline, dataset-agnostic check, -l ag_news transfer gate) still
+pending on completion — the one outstanding deliverable.
+
 ### 2026-07-04 — GEPA parallelism + reward granularity fixed (hourly check)
 
 Iterated the tuner with Lee to canonical dspy usage + fixes; run live and healthy now:
