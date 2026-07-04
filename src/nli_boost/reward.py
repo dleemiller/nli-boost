@@ -27,12 +27,14 @@ from dataclasses import dataclass, field
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import StratifiedKFold, cross_val_score
+from threadpoolctl import threadpool_limits
 
 
 @dataclass
 class RewardConfig:
     cv_seeds: int = 3  # fold-seeds averaged to beat the ~0.003 CV noise floor
     cv_folds: int = 4
+    cpu_threads: int = 4  # cap HGB's per-core OpenMP pool so it stays civil on a shared box
     weights: dict = field(  # renormalized over the terms actually present
         default_factory=lambda: {"cv_skill": 0.6, "diversity": 0.15, "anti_hack": 0.1, "judge": 0.15}
     )
@@ -54,10 +56,11 @@ def _cv_skill(x: np.ndarray, y: np.ndarray, cfg: RewardConfig) -> tuple[float, f
     Normalizing above majority makes datasets of different class balance comparable."""
     base = float(np.bincount(y).max() / len(y))
     accs = []
-    for s in range(cfg.cv_seeds):
-        skf = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True, random_state=1000 + s)
-        clf = HistGradientBoostingClassifier(max_iter=150, random_state=0)
-        accs.append(float(cross_val_score(clf, x, y, cv=skf).mean()))
+    with threadpool_limits(limits=cfg.cpu_threads):  # bound OpenMP; no thread swarm on a shared box
+        for s in range(cfg.cv_seeds):
+            skf = StratifiedKFold(n_splits=cfg.cv_folds, shuffle=True, random_state=1000 + s)
+            clf = HistGradientBoostingClassifier(max_iter=150, random_state=0)
+            accs.append(float(cross_val_score(clf, x, y, cv=skf).mean()))
     acc = float(np.mean(accs))
     return max(0.0, (acc - base) / (1.0 - base + 1e-9)), acc, float(np.std(accs))
 

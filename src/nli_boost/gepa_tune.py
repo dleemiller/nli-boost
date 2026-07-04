@@ -196,7 +196,7 @@ def optimize_instruction(
         reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=16000),
         max_metric_calls=max_metric_calls,
         track_stats=True,
-        num_threads=2,  # GPU serialized by lock; keep CPU workers few (no-OOM rule)
+        num_threads=1,  # serial metric calls: one GPU-scoring + one capped CV at a time
         log_dir=str(log_dir),  # checkpoints every iteration -> resumable on re-run
         gepa_kwargs={"stop_callbacks": stoppers},
     )
