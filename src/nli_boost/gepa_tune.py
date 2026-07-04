@@ -44,27 +44,31 @@ from .reward import RewardConfig, geometric_mean, pool_reward
 _INPUTS = ("task", "class_definitions", "labeled_examples", "n", "avoid")
 
 
-def build_contexts(specs, pool_size, sub_size, seed):
-    """One frozen dspy.Example per (dataset, seed); returns (examples, bundles-by-key)."""
+def build_contexts(specs, pool_size, sub_size, seed, n_subsamples=1):
+    """Frozen dspy.Examples for GEPA. Each (dataset, seed) yields `n_subsamples` contexts, each a
+    DISTINCT stratified subsample + example sample. Resampling turns a handful of datasets into a
+    real validation pool: a 2-example valset is a degenerate Pareto frontier / minibatch-of-2.
+    Correlated within a dataset, but it cuts per-eval reward variance and gives GEPA a smoother
+    selection signal. Returns (examples, bundles-by-key)."""
     bundles, examples = {}, []
     for name, sd in specs:
         bundle = load(DataConfig(name=name), sd)
-        key = (name, sd)
-        bundles[key] = bundle
-        rng = np.random.default_rng(sd)
-        sub = stratified_indices(bundle.y_train, min(sub_size, len(bundle.y_train)), rng)
-        examples.append(
-            dspy.Example(
-                task=bundle.task,
-                class_definitions=bundle.class_descriptions,
-                labeled_examples=labeled_examples(bundle, per_class=3, rng=rng),
-                n=pool_size,
-                avoid=[],
-                dataset=name,
-                seed=sd,
-                sub=sub.tolist(),
-            ).with_inputs(*_INPUTS)
-        )
+        bundles[(name, sd)] = bundle
+        for i in range(n_subsamples):
+            rng = np.random.default_rng(sd * 10_000 + i)  # distinct subsample + examples per context
+            sub = stratified_indices(bundle.y_train, min(sub_size, len(bundle.y_train)), rng)
+            examples.append(
+                dspy.Example(
+                    task=bundle.task,
+                    class_definitions=bundle.class_descriptions,
+                    labeled_examples=labeled_examples(bundle, per_class=3, rng=rng),
+                    n=pool_size,
+                    avoid=[],
+                    dataset=name,
+                    seed=sd,
+                    sub=sub.tolist(),
+                ).with_inputs(*_INPUTS)
+            )
     return examples, bundles
 
 
@@ -226,12 +230,13 @@ def optimize_instruction(
     encoder: EncoderConfig | None = None,
     pool_size=28,
     sub_size=400,
+    subsamples=12,  # contexts PER (dataset, seed) via resampling -> a non-degenerate valset
     max_metric_calls=700,  # ~dspy auto="light" scale; most calls are valset re-scores
     timeout_min=90.0,
     seed=7,
     cache_dir=Path("cache"),
 ) -> dict:
-    """Feasibility-scale defaults (max_metric_calls=40). Returns the tuned instruction.
+    """Returns the tuned instruction. Validation pool = len(tune_specs) * subsamples contexts.
 
     Stops on whichever comes first: max_metric_calls, timeout_min wall-clock, a
     `touch <out>.stop` sentinel, or Ctrl-C/SIGTERM — all keep the best-so-far.
@@ -239,7 +244,11 @@ def optimize_instruction(
     """
     student_lm = student_lm or LMConfig()
     encoder = encoder or EncoderConfig()
-    examples, bundles = build_contexts(tune_specs, pool_size, sub_size, seed)
+    examples, bundles = build_contexts(tune_specs, pool_size, sub_size, seed, n_subsamples=subsamples)
+    print(
+        f"--- GEPA contexts: {len(examples)} ({len(tune_specs)} datasets x {subsamples} subsamples)",
+        flush=True,
+    )
 
     scorer = EntailmentScorer(encoder, ScoreCache(cache_dir / "nli_scores.sqlite"), CostTracker())
     judge = (
