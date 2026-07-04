@@ -122,14 +122,15 @@ class PoolRewardMetric:
 # cv/coverage/diversity already measure). These 6 each catch a distinct semantic defect that
 # held-out accuracy can miss (surface-hacking, label leakage, missing an angle/class, no contrast,
 # vacuity). Per-criterion booleans are logged so we can prune any that turn out dead/redundant.
+# Pruned to the criteria that actually DISCRIMINATE (per-criterion audit on a 49-pool run):
+# dropped covers_every_class (98% true) and multiple_semantic_angles (90% true) — near-constant,
+# no signal. Kept the four that vary meaningfully. Still logged per-criterion to re-audit.
 _SET_CRITERIA = {
+    "has_contrastive": "includes hypotheses that separate GROUPS of classes, not only one-vs-rest",
     "semantic_not_surface": "hypotheses are about MEANING, not surface tricks (word position, "
     "punctuation, casing, length, exact word presence)",
-    "no_label_leakage": "no hypothesis references the class labels, the dataset, or the task itself",
-    "covers_every_class": "every class has at least one hypothesis clearly aimed at distinguishing it",
-    "multiple_semantic_angles": "hypotheses span several angles (topic, entity, intent, style), not one kind",
-    "has_contrastive": "includes hypotheses that separate GROUPS of classes, not only one-vs-rest",
     "non_vacuous": "few hypotheses are tautological or true of almost any text",
+    "no_label_leakage": "no hypothesis references the class labels, the dataset, or the task itself",
 }
 
 
