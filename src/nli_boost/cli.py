@@ -107,20 +107,28 @@ def compare(run_a: Path, run_b: Path):
 def gepa_tune(
     out: Path = Path("models/proposer_instruction.json"),
     tune: str = "trec:7,sst2:7",
+    teacher: str = "openrouter/deepseek/deepseek-v4-pro",
+    teacher_reasoning: bool = True,
+    teacher_temp: float = 1.0,
     max_calls: int = 700,
     timeout_min: float = 90.0,
     pool_size: int = 28,
     sub_size: int = 400,
 ):
     """Offline GEPA tuning of the GeneratePool instruction. `tune` = comma list of
-    dataset:seed contexts (hold out any dataset used for the accept gate). Stops on
-    max_calls, timeout_min, `touch <out>.stop`, or Ctrl-C; re-run to resume."""
+    dataset:seed contexts (hold out any dataset used for the accept gate). `teacher` is the
+    reflection model; --no-teacher-reasoning often diversifies proposals. Use a distinct --out
+    per experiment so runs don't clobber. Stops on max_calls/timeout/`touch <out>.stop`."""
     from .gepa_tune import optimize_instruction
 
     specs = [(p.split(":")[0], int(p.split(":")[1])) for p in tune.split(",")]
     r = optimize_instruction(
         out,
         specs,
+        reflection_model=teacher,
+        judge_model=teacher,
+        teacher_reasoning=teacher_reasoning,
+        teacher_temperature=teacher_temp,
         pool_size=pool_size,
         sub_size=sub_size,
         max_metric_calls=max_calls,

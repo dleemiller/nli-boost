@@ -147,6 +147,8 @@ def optimize_instruction(
     tune_specs,
     reflection_model="openrouter/deepseek/deepseek-v4-pro",
     judge_model="openrouter/deepseek/deepseek-v4-pro",
+    teacher_reasoning=True,
+    teacher_temperature=1.0,
     student_lm: LMConfig | None = None,
     encoder: EncoderConfig | None = None,
     pool_size=28,
@@ -191,9 +193,14 @@ def optimize_instruction(
         SignalStopper(),
     ]
     dspy.configure(lm=_make_lm(student_lm))
+    # teacher (reflection) LM: reasoning-mode models converge on similar edits regardless of
+    # temperature, so reasoning=False is often the real diversity lever (see NOTES 2026-07-04).
+    refl_kwargs = {} if teacher_reasoning else {"extra_body": {"reasoning": {"enabled": False}}}
     gepa = dspy.GEPA(
         metric=metric,
-        reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=16000),
+        reflection_lm=dspy.LM(
+            reflection_model, temperature=teacher_temperature, max_tokens=16000, **refl_kwargs
+        ),
         max_metric_calls=max_metric_calls,
         track_stats=True,
         num_threads=1,  # serial metric calls: one GPU-scoring + one capped CV at a time
