@@ -114,6 +114,7 @@ def gepa_tune(
     subsamples: int = 12,
     max_calls: int = 700,
     timeout_min: float = 90.0,
+    fresh: bool = False,
     pool_size: int = 28,
     sub_size: int = 400,
 ):
@@ -136,6 +137,7 @@ def gepa_tune(
         sub_size=sub_size,
         max_metric_calls=max_calls,
         timeout_min=timeout_min,
+        fresh=fresh,
     )
     console.print(f"[bold]baseline reward geo-mean:[/bold] {r['baseline_geo_mean']}")
     console.print(f"[bold]tuned instruction saved:[/bold] {r['saved_to']}")

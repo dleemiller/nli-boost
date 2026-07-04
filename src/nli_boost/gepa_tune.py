@@ -233,6 +233,7 @@ def optimize_instruction(
     subsamples=12,  # contexts PER (dataset, seed) via resampling -> a non-degenerate valset
     max_metric_calls=700,  # ~dspy auto="light" scale; most calls are valset re-scores
     timeout_min=90.0,
+    fresh=False,
     seed=7,
     cache_dir=Path("cache"),
 ) -> dict:
@@ -240,10 +241,22 @@ def optimize_instruction(
 
     Stops on whichever comes first: max_metric_calls, timeout_min wall-clock, a
     `touch <out>.stop` sentinel, or Ctrl-C/SIGTERM — all keep the best-so-far.
-    log_dir also checkpoints every iteration, so re-running the SAME command resumes.
+    log_dir checkpoints every iteration, so re-running the SAME command resumes — unless
+    fresh=True, which wipes this out_path's checkpoint/eval-log/stop-file first (use when the
+    reward, context count, or datasets changed and a resume would mismatch).
     """
     student_lm = student_lm or LMConfig()
     encoder = encoder or EncoderConfig()
+    eval_log = out_path.with_suffix(".evals.jsonl")
+    log_dir = out_path.parent / f"{out_path.stem}_gepa_logs"
+    stop_file = out_path.with_suffix(".stop")
+    if fresh:  # avoid the resume trap when reward/contexts changed (a stale checkpoint mismatches)
+        import shutil
+
+        shutil.rmtree(log_dir, ignore_errors=True)
+        eval_log.unlink(missing_ok=True)
+        stop_file.unlink(missing_ok=True)
+        print("--- fresh: wiped checkpoint, eval log, and stop file for this run", flush=True)
     examples, bundles = build_contexts(tune_specs, pool_size, sub_size, seed, n_subsamples=subsamples)
     print(
         f"--- GEPA contexts: {len(examples)} ({len(tune_specs)} datasets x {subsamples} subsamples)",
@@ -256,16 +269,13 @@ def optimize_instruction(
         if judge_model
         else None
     )
-    metric = PoolRewardMetric(scorer, bundles, judge=judge, eval_log=out_path.with_suffix(".evals.jsonl"))
+    metric = PoolRewardMetric(scorer, bundles, judge=judge, eval_log=eval_log)
 
     baseline = _baseline_scores(examples, bundles, scorer, metric, student_lm)
 
-    # per-instruction checkpoint dir (NOT the shared models/gepa_logs, which holds the
-    # stale pre-rewrite tree-GEPA state — resuming from that would load an incompatible
-    # program). Same command re-runs resume from here; a fresh out_path starts clean.
-    log_dir = out_path.parent / f"{out_path.stem}_gepa_logs"
+    # per-instruction checkpoint dir (NOT the shared models/gepa_logs, which holds the stale
+    # pre-rewrite tree-GEPA state). Same command re-runs resume from here unless fresh=True.
     log_dir.mkdir(parents=True, exist_ok=True)
-    stop_file = out_path.with_suffix(".stop")
     # stop on whichever fires first; all return the best-so-far. MaxMetricCallsStopper
     # is included because passing stop_callbacks overrides the built-in call cap.
     stoppers = [
