@@ -214,7 +214,7 @@ def make_judge(judge_lm):
 
 
 # Fixed, sensible internals (kept off the CLI on purpose — dspy's auto budget handles scale).
-_POOL_SIZE, _SUB_SIZE, _SUBSAMPLES = 28, 400, 24
+_POOL_SIZE, _SUB_SIZE, _SUBSAMPLES = 28, 400, 45
 
 
 def optimize_instruction(
@@ -223,6 +223,7 @@ def optimize_instruction(
     reflection_model="openrouter/deepseek/deepseek-v4-pro",
     judge_model="openrouter/deepseek/deepseek-v4-pro",
     auto="light",  # dspy GEPA budget preset: light | medium | heavy (sets metric-call budget)
+    threads=8,  # concurrent metric evals -> parallel OpenRouter calls (LLM I/O is the bottleneck)
     student_lm: LMConfig | None = None,
     encoder: EncoderConfig | None = None,
     fresh=False,
@@ -254,7 +255,11 @@ def optimize_instruction(
 
     scorer = EntailmentScorer(encoder, ScoreCache(cache_dir / "nli_scores.sqlite"), CostTracker())
     judge = make_judge(_make_lm(LMConfig(model=judge_model), reasoning=False)) if judge_model else None
-    metric = PoolRewardMetric(scorer, bundles, judge=judge, eval_log=eval_log)
+    # concurrent evals share the GPU (lock-serialized) and each caps its CV to 2 threads, so with
+    # `threads` workers total CPU threads stay ~2*threads (no OOM); the LLM calls run in parallel.
+    metric = PoolRewardMetric(
+        scorer, bundles, reward_cfg=RewardConfig(cpu_threads=2), judge=judge, eval_log=eval_log
+    )
     baseline = _baseline_scores(valset, metric, student_lm)
 
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -263,7 +268,7 @@ def optimize_instruction(
         metric=metric,
         reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=32000),
         auto=auto,
-        num_threads=1,  # GPU scoring is lock-serialized; keep CPU serial too (no-OOM rule)
+        num_threads=threads,  # parallel LLM I/O; GPU is lock-serialized, CV capped -> safe
         track_stats=True,
         log_dir=str(log_dir),  # per-iteration checkpoints -> Ctrl-C then re-run resumes
     )

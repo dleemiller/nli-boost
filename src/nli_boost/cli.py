@@ -110,16 +110,19 @@ def gepa_tune(
     teacher: str = "openrouter/deepseek/deepseek-v4-pro",
     judge: str = "openrouter/deepseek/deepseek-v4-pro",
     auto: str = "light",
+    threads: int = 8,
     fresh: bool = False,
 ):
     """Offline GEPA tuning of the GeneratePool instruction (dspy auto budget). `tune` = comma
     list of dataset:seed contexts (hold out any dataset used for the accept gate). `auto` is the
-    budget preset (light|medium|heavy). --fresh wipes this out's checkpoint before starting; else
-    re-running resumes. Ctrl-C to stop early (checkpointed)."""
+    budget preset (light|medium|heavy). `threads` = concurrent metric evals (parallel OpenRouter
+    calls). --fresh wipes this out's checkpoint before starting; else re-running resumes."""
     from .gepa_tune import optimize_instruction
 
     specs = [(p.split(":")[0], int(p.split(":")[1])) for p in tune.split(",")]
-    r = optimize_instruction(out, specs, reflection_model=teacher, judge_model=judge, auto=auto, fresh=fresh)
+    r = optimize_instruction(
+        out, specs, reflection_model=teacher, judge_model=judge, auto=auto, threads=threads, fresh=fresh
+    )
     console.print(f"[bold]baseline reward geo-mean:[/bold] {r['baseline_geo_mean']}")
     console.print(f"[bold]tuned instruction saved:[/bold] {r['saved_to']}")
     console.print(f"\n[dim]{r['tuned_instruction']}[/dim]")
