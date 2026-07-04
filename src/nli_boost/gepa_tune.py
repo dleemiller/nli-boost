@@ -117,46 +117,78 @@ class PoolRewardMetric:
         return ScoreWithFeedback(score=r["score"], feedback=feedback)
 
 
-# Per-hypothesis BOOLEAN checks. LLMs have no grounding for continuous 0-1 scores (they collapse
-# onto a few round anchors); a yes/no question is grounded. Granularity comes from the COUNT of
-# booleans satisfied across many hypotheses x criteria — a near-continuous fraction, not a float.
-_HYP_CRITERIA = ("semantic", "verifiable", "discriminative", "non_duplicate")
+# BOOLEAN rubric. LLMs have no grounding for continuous 0-1 scores (known bad practice — they
+# collapse onto a few round anchors); a yes/no question is grounded. Reward VARIATION comes from
+# the QUANTITY of independent boolean criteria: N per-hypothesis criteria x M hypotheses + K
+# set-level criteria => the fraction-passing takes many distinct values and moves whenever any
+# single boolean flips. So we ask MANY criteria, not a few.
+_HYP_CRITERIA = (
+    "semantic",  # about the text's content/meaning, not surface form (length, punctuation, casing)
+    "verifiable",  # a single self-contained claim checkable from one text alone
+    "discriminative",  # not vacuous / true of almost any text; actually splits some texts
+    "non_duplicate",  # not a paraphrase or near-duplicate of another hypothesis in the set
+    "single_claim",  # exactly one property, not a compound "A and B" / "A or B" statement
+    "affirmative",  # phrased affirmatively rather than as a negation
+    "specific",  # concrete enough to be FALSE for a meaningful fraction of texts
+    "class_aligned",  # plausibly aligns with a real distinction among the target classes
+    "no_leakage",  # no reference to labels, the dataset, or the act of classification
+    "well_formed",  # a single declarative present-tense sentence about "the text"
+)
+_SET_CRITERIA = (
+    "covers_all_classes",  # every class, incl. minorities, has >=1 hypothesis aimed at it
+    "targets_minority_classes",  # deliberate hypotheses for the smaller/harder classes
+    "varied_specificity",  # mixes broad and narrow hypotheses rather than one granularity
+    "multiple_angles",  # spans topic, entity, intent, and style angles (not one kind)
+    "includes_contrastive",  # includes hypotheses that split GROUPS of classes apart
+    "low_overall_redundancy",  # few near-duplicate hypotheses across the whole set
+)
 
-
-class _HypCheck(BaseModel):
-    index: int
-    semantic: bool  # about the text's content/meaning, not surface form (length, punctuation, casing)
-    verifiable: bool  # a single self-contained claim checkable from one text alone
-    discriminative: bool  # plausibly separates some class(es); not vacuous / true of almost any text
-    non_duplicate: bool  # not a paraphrase or near-duplicate of another hypothesis in the set
+_HypCheck = type(
+    "_HypCheck",
+    (BaseModel,),
+    {"__annotations__": {"index": int, **{c: bool for c in _HYP_CRITERIA}}},
+)
 
 
 def make_judge(judge_lm):
-    """Boolean-rubric pool judge. Each hypothesis gets four yes/no checks and the set gets two;
-    the reward uses the FRACTION of checks that pass (grounded per-item booleans -> fine-grained
-    aggregate). The per-criterion failure counts + critique are fed to GEPA's reflection LM.
-    Reasoning disabled (the caller passes a no-reasoning LM)."""
+    """Boolean-rubric pool judge. Each hypothesis gets 10 independent yes/no checks and the set
+    gets 6; the reward is the FRACTION of all booleans that pass — grounded per-item judgments
+    whose COUNT gives fine-grained variation (no ungrounded float scores). Per-criterion failure
+    counts + critique feed GEPA's reflection. Reasoning disabled (caller passes a no-reasoning LM)."""
 
-    class JudgePool(dspy.Signature):
-        """Judge a set of NLI hypotheses used as features for a text classifier. For EACH
-        hypothesis (by index) answer four yes/no checks — semantic, verifiable, discriminative,
-        non_duplicate — judged strictly and INDEPENDENTLY; when in doubt answer false. Then two
-        set-level yes/no checks, and a critique aimed at improving the GENERATOR'S INSTRUCTIONS."""
-
-        task: str = dspy.InputField()
-        class_definitions: list[str] = dspy.InputField()
-        hypotheses: list[str] = dspy.InputField()
-        checks: list[_HypCheck] = dspy.OutputField(desc="exactly one entry per hypothesis, same order")
-        covers_all_classes: bool = dspy.OutputField(
-            desc="true if every class, including minority classes, has at least one hypothesis aimed at it"
-        )
-        varied_specificity: bool = dspy.OutputField(
-            desc="true if the set mixes broad and narrow hypotheses rather than one granularity"
-        )
-        critique: str = dspy.OutputField(
+    fields = {
+        "task": (str, dspy.InputField()),
+        "class_definitions": (list[str], dspy.InputField()),
+        "hypotheses": (list[str], dspy.InputField()),
+        "checks": (
+            list[_HypCheck],
+            dspy.OutputField(desc="exactly one entry per hypothesis, same order; answer every boolean"),
+        ),
+    }
+    _SET_DESC = {
+        "covers_all_classes": "every class, including minority classes, has >=1 hypothesis aimed at it",
+        "targets_minority_classes": "there are deliberate hypotheses for the smaller/harder classes",
+        "varied_specificity": "the set mixes broad and narrow hypotheses rather than one granularity",
+        "multiple_angles": "the set spans topic, entity, intent, and style angles, not just one kind",
+        "includes_contrastive": "the set includes hypotheses that split GROUPS of classes apart",
+        "low_overall_redundancy": "few near-duplicate hypotheses across the whole set",
+    }
+    for c in _SET_CRITERIA:
+        fields[c] = (bool, dspy.OutputField(desc=f"true if {_SET_DESC[c]}"))
+    fields["critique"] = (
+        str,
+        dspy.OutputField(
             desc="Actionable: quote the 2-3 weakest hypotheses, name class distinctions the set "
             "misses, and state the strategy change the GENERATOR should adopt. No class names."
-        )
+        ),
+    )
+    JudgePool = dspy.Signature(
+        fields,
+        "Judge a set of NLI hypotheses used as features for a text classifier. For EACH hypothesis "
+        "(by index) answer all per-hypothesis yes/no checks, judged strictly and INDEPENDENTLY — "
+        "when in doubt answer false. Then answer the set-level yes/no checks and write a critique "
+        "aimed at improving the GENERATOR'S INSTRUCTIONS.",
+    )
 
     predict = dspy.Predict(JudgePool)
     predict.set_lm(judge_lm)  # dspy.context is forbidden in GEPA worker threads
@@ -167,17 +199,15 @@ def make_judge(judge_lm):
             checks = list(r.checks)[: len(pool)]
             if not checks:
                 return 0.5, ""
-            passed = {c: sum(bool(getattr(ck, c)) for ck in checks) for c in _HYP_CRITERIA}
-            per_hyp = sum(passed.values()) / (
-                len(checks) * len(_HYP_CRITERIA)
-            )  # fraction of item-checks true
-            set_level = (bool(r.covers_all_classes) + bool(r.varied_specificity)) / 2.0
-            score = 0.85 * per_hyp + 0.15 * set_level
-            breakdown = ", ".join(f"{c} {passed[c]}/{len(checks)}" for c in _HYP_CRITERIA)
-            detail = (
-                f"judge booleans [{breakdown}; covers_all_classes={bool(r.covers_all_classes)}, "
-                f"varied_specificity={bool(r.varied_specificity)}]. {(r.critique or '').strip()}"
-            )
+            hyp_pass = {c: sum(bool(getattr(ck, c, False)) for ck in checks) for c in _HYP_CRITERIA}
+            n_hyp_bool = len(checks) * len(_HYP_CRITERIA)
+            set_pass = {c: bool(getattr(r, c, False)) for c in _SET_CRITERIA}
+            # fraction of ALL booleans true (per-hypothesis + set-level pooled) -> many distinct levels
+            total_true = sum(hyp_pass.values()) + sum(set_pass.values())
+            score = total_true / (n_hyp_bool + len(_SET_CRITERIA))
+            hyp_bd = ", ".join(f"{c} {hyp_pass[c]}/{len(checks)}" for c in _HYP_CRITERIA)
+            set_bd = ", ".join(f"{c}={set_pass[c]}" for c in _SET_CRITERIA)
+            detail = f"judge per-hyp [{hyp_bd}]; set [{set_bd}]. {(r.critique or '').strip()}"
             return score, detail
         except Exception:
             return 0.5, ""
