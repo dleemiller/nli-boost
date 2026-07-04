@@ -93,6 +93,23 @@ Two fixes committed as a result:
    run also carries the improved judge feedback, so a clean teacher ablation would re-run deepseek
    under the new feedback too; deferring that unless GLM's result is ambiguous.
 
+### 2026-07-04 — GEPA parallelism + reward granularity fixed (hourly check)
+
+Iterated the tuner with Lee to canonical dspy usage + fixes; run live and healthy now:
+- **Simplified to canonical dspy GEPA**: `auto='light'` budget (not hand-set max_calls/stop_callbacks),
+  large trainset (~60) + small valset (~30, docs say <=35). CLI is just --out/--tune/--teacher/
+  --judge/--auto/--threads/--fresh. --fresh wipes the checkpoint (avoids the resume-terminate trap).
+- **Judge = grounded booleans, not floats** (float scores are ungrounded, collapse to a few anchors —
+  [[feedback-llm-judge-booleans]]). Kept CONCISE for speed: 18 SET-LEVEL booleans + one short fix
+  line (a per-hypothesis rubric hit ~2500 tok/call, too slow). Continuous cv/coverage terms carry
+  the fine granularity. Result: reward now takes 20 distinct trec / 12 sst2 values (was 5/5).
+- **Parallelism fixed** (was ~2-3 req/min): the metric held a GPU lock before the judge, serializing
+  the LLM calls; moved judge before scoring, then (Lee: concurrent GPU is fine here) removed the GPU
+  lock entirely so scoring overlaps too. num_threads=8 now genuinely 8-wide → ~32 evals/min.
+- Reward numbers are on the NEW scale — NOT comparable to old-reward runs (DeepSeek 0.761, GLM). A
+  fresh run under this reward is the basis for any adoption decision; transfer gate (ag_news @ -l)
+  still the acceptance test.
+
 ### 2026-07-04 — GEPA run status (in flight, hourly check)
 
 Light-scale run live and healthy (~154/700 calls, 22 min, 149% CPU — thread cap holding,
