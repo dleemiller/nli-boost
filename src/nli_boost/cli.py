@@ -103,5 +103,24 @@ def compare(run_a: Path, run_b: Path):
     console.print(f"verdict: {verdict}")
 
 
+@app.command("gepa-tune")
+def gepa_tune(
+    out: Path = Path("models/proposer_instruction.json"),
+    tune: str = "trec:7,sst2:7",
+    max_calls: int = 40,
+    pool_size: int = 28,
+    sub_size: int = 400,
+):
+    """Offline GEPA tuning of the GeneratePool instruction. `tune` = comma list of
+    dataset:seed contexts (hold out any dataset used for the accept gate)."""
+    from .gepa_tune import optimize_instruction
+
+    specs = [(p.split(":")[0], int(p.split(":")[1])) for p in tune.split(",")]
+    r = optimize_instruction(out, specs, pool_size=pool_size, sub_size=sub_size, max_metric_calls=max_calls)
+    console.print(f"[bold]baseline reward geo-mean:[/bold] {r['baseline_geo_mean']}")
+    console.print(f"[bold]tuned instruction saved:[/bold] {r['saved_to']}")
+    console.print(f"\n[dim]{r['tuned_instruction']}[/dim]")
+
+
 if __name__ == "__main__":
     app()

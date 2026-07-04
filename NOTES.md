@@ -47,6 +47,39 @@ explicit "classes still mixed: X vs Y" phrasing.
 
 ## Reviews
 
+### 2026-07-04 — GEPA instruction tuning, redesigned + PRE-REGISTERED (feasibility probe)
+
+Rebuilt GEPA around the committed pool method (the first attempt was for the tree proposer and
+overfit one dataset: +5.4 TREC / −3.3 AG News). New pieces committed: reward.py (composite
+pool-quality reward) + gepa_tune.py (optimize the GeneratePool INSTRUCTION, flash student, pro
+reflection+judge) + `nli-boost gepa-tune`. Reward design and validation:
+
+- Terms (each ties to a finding): noise-averaged held-out CV skill (primary; averaging beats the
+  ~0.003 HGB jitter so GEPA can't hack it), effective-rank diversity (anti-collapse — the lever
+  Lee identified), length/vacuity anti-hack penalties (from diagnostics.py), optional pro judge.
+  Cross-dataset aggregation = GEOMETRIC mean (craters if any dataset tanks → generalization pressure).
+- Reward VALIDATED on cached pools (no GPU): ranks diverse > collapsed on trec/ag_news/sst2
+  (+0.014/+0.043/+0.064). Sharpest check — sst2 collapsed sub-pool has EQUAL raw CV acc (0.9353 vs
+  0.9338) but scores lower (0.770 vs 0.834) via eff rank 8.3 vs 16 + 2 length artifacts. The reward
+  penalizes fragile collapse before it costs accuracy; pure-accuracy optimization would miss it.
+
+Pre-registration (feasibility probe, before launch):
+- Setup: tune on trec:7 + sst2:7 (question-type + sentiment, maximally different tasks); HOLD OUT
+  ag_news for the accept gate. pool 28, sub 400, -m encoder, max_calls 40, pro judge (reasoning off)
+  + pro reflection, flash student.
+- Bar: baseline = current instruction's reward geo-mean (printed at run start).
+- DECISION RULE: PASS if tuned geo-mean > baseline + 0.01 AND the evolved instruction reads as
+  dataset-agnostic + sensible (inspect models/proposer_instruction.evals.jsonl + the printed
+  instruction). Then scale up + full-method McNemar accept gate on held-out ag_news at -l (adopt
+  only on a significant, transferring gain). FAIL if no reward gain or dataset-specific overfit →
+  GEPA instruction tuning refuted for this method; document and stop.
+- Honest upside: bounded. Encoder is the capacity ceiling (only significant win, p=0.024) and flash
+  pools ≈ pro pools (review #46); this optimizes pool quality up to that ceiling. Value is a
+  reusable, noise-robust, anti-hacking instruction-optimization loop + any non-obvious gains.
+- Cost/safety: est. ~30–45 min shared GPU (32×400 pairs/eval × 40 on -m), <$1 LM, trivial RAM
+  (serial CV, 400×~56 matrices). Justification for >40-min soft cap: one-time methodology gate.
+  GPU scoring lock-serialized, CV serial (n_jobs=1), GEPA num_threads=2 — no process forks, no OOM.
+
 ### 2026-07-04 — hourly: plateau-epsilon tune REFUTED by trajectory calibration (no code change)
 
 Pre-registered expectation (from the backlog): held-out crept +1e-4/round forever, so the plateau
