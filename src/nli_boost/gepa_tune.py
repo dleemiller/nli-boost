@@ -99,11 +99,13 @@ class PoolRewardMetric:
         with self._gpu:
             x = self.scorer.features(texts, pool)  # cache-through; GPU only on misses
 
-        judge_score = self.judge(gold, pool) if self.judge else None
+        judge_score, judge_critique = self.judge(gold, pool) if self.judge else (None, "")
         r = pool_reward(x, y, pool, texts, self.reward_cfg, judge_score=judge_score)
-        feedback = (
-            f"[{gold.dataset}] {r['feedback']}"
-            + "\n\nKeep the instruction GENERIC and dataset-agnostic — it is reused across many "
+        feedback = f"[{gold.dataset}] {r['feedback']}"
+        if judge_critique:  # the judge's SEMANTIC critique is the actionable signal for reflection
+            feedback += f"\n\nJudge critique of this pool (what to fix): {judge_critique}"
+        feedback += (
+            "\n\nKeep the instruction GENERIC and dataset-agnostic — it is reused across many "
             "tasks. Encode better strategies (angles to cover, targeting minority classes, "
             "varying specificity, avoiding paraphrase and surface tricks), never dataset-specific "
             "class names, topics, or canned statements."
@@ -115,19 +117,27 @@ class PoolRewardMetric:
 
 
 def make_judge(judge_lm):
-    """Boolean-rubric pool judge, blind to the numeric reward; reasoning disabled."""
+    """Pool judge: a numeric score AND an actionable critique. The critique is the
+    load-bearing part — it is fed to GEPA's reflection LM, which edits the instruction,
+    so it must name concrete pool weaknesses that imply instruction-level fixes.
+    Reasoning disabled (the caller passes a no-reasoning LM)."""
 
     class JudgePool(dspy.Signature):
-        """Rate a set of NLI hypotheses written as features for a text classifier.
-        Score 0-1 how well the SET would separate the classes: semantic (about content,
-        not surface form), verifiable from one text alone, non-duplicated, covering all
-        classes including minorities, with varied specificity. Judge strictly."""
+        """Rate a set of NLI hypotheses used as features for a text classifier, and critique it
+        so a prompt engineer could improve the GENERATOR'S INSTRUCTIONS (not this specific pool).
+        Score 0-1 how well the SET would separate the classes: semantic (about content, not
+        surface form), verifiable from one text alone, non-duplicated, covering all classes
+        including minorities, with varied specificity. Judge strictly."""
 
         task: str = dspy.InputField()
         class_definitions: list[str] = dspy.InputField()
         hypotheses: list[str] = dspy.InputField()
-        score: float = dspy.OutputField(desc="0.0-1.0 set quality")
-        critique: str = dspy.OutputField(desc="name the weakest statements and what to change")
+        score: float = dspy.OutputField(desc="0.0-1.0 overall set quality")
+        critique: str = dspy.OutputField(
+            desc="Actionable, specific: (1) quote the 2-3 weakest/redundant/surface-level "
+            "hypotheses and say why; (2) name class distinctions the set fails to cover; "
+            "(3) state the strategy change the GENERATOR should adopt to fix these. No class names."
+        )
 
     predict = dspy.Predict(JudgePool)
     predict.set_lm(judge_lm)  # dspy.context is forbidden in GEPA worker threads
@@ -135,9 +145,9 @@ def make_judge(judge_lm):
     def judge(gold, pool):
         try:
             r = predict(task=gold.task, class_definitions=gold.class_definitions, hypotheses=pool)
-            return float(max(0.0, min(1.0, r.score)))
+            return float(max(0.0, min(1.0, r.score))), (r.critique or "").strip()
         except Exception:
-            return 0.5
+            return 0.5, ""
 
     return judge
 
