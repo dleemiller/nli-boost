@@ -1,0 +1,92 @@
+"""Fakes for GPU/LM-free testing of the full pipeline.
+
+FakeScorer: texts encode feature values as 'v0|v1|...'; hypothesis 'f<i>'
+reads column i. features() mirrors EntailmentScorer's (n, 2m) layout with an
+uninformative contradiction half.
+"""
+
+import numpy as np
+
+from nli_boost.data import Bundle
+
+
+class FakeScorer:
+    def __init__(self):
+        self.pairs_scored = 0
+
+    def features(self, texts, pool):
+        vals = np.array([[float(v) for v in t.split("|")] for t in texts])
+        cols = [int(h.split()[0][1:]) for h in pool]  # "f3 ..." -> column 3
+        e = vals[:, cols]
+        self.pairs_scored += e.size
+        return np.concatenate([e, np.full_like(e, 0.5)], axis=1)
+
+
+class FakeProposer:
+    """Returns queued responses; records every call for assertions."""
+
+    def __init__(self, generate_batches=None, refill_batches=None):
+        self.generate_batches = list(generate_batches or [])
+        self.refill_batches = list(refill_batches or [])
+        self.generate_calls = []
+        self.refill_calls = []
+
+    def generate(self, task, class_definitions, examples, n, avoid):
+        self.generate_calls.append(dict(n=n, avoid=list(avoid)))
+        return self.generate_batches.pop(0) if self.generate_batches else []
+
+    def refill(self, task, class_definitions, examples, survivors, failed, confusion_evidence, n):
+        self.refill_calls.append(
+            dict(
+                n=n,
+                survivors=list(survivors),
+                failed=list(failed),
+                confusion_evidence=list(confusion_evidence),
+            )
+        )
+        return self.refill_batches.pop(0) if self.refill_batches else []
+
+
+class TextOnlyDeduper:
+    """Real textual dedup behavior without the STS model."""
+
+    def filter(self, candidates, against, seen):
+        from nli_boost.dedup import norm_statement
+
+        kept, rejected = [], []
+        for c in candidates:
+            key = norm_statement(c)
+            if key and key not in seen:
+                seen.add(key)
+                kept.append(c)
+            else:
+                rejected.append(c)
+        return kept, rejected
+
+
+def encode(x: np.ndarray) -> list[str]:
+    return ["|".join(f"{v:.6f}" for v in row) for row in np.atleast_2d(x)]
+
+
+def make_bundle(n=400, seed=0, n_features=8, n_classes=4):
+    """f0, f1 informative (define the label); remaining features are noise;
+    the LAST feature column is constant (guaranteed confident-dead)."""
+    rng = np.random.default_rng(seed)
+    x = rng.random((n, n_features))
+    x[:, -1] = 0.5  # constant -> undetectable by construction
+    y = (x[:, 0] > 0.5).astype(int) * 2 + (x[:, 1] > 0.5).astype(int)
+    y = y % n_classes
+    names = [f"C{i}" for i in range(n_classes)]
+    half = n // 2
+    return Bundle(
+        name="fake",
+        task="separate the classes",
+        class_names=names,
+        class_descriptions=[f"{c}: fake definition" for c in names],
+        train_texts=encode(x[:half]),
+        y_train=y[:half],
+        val_texts=encode(x[half : half + n // 4]),
+        y_val=y[half : half + n // 4],
+        test_texts=encode(x[half + n // 4 :]),
+        y_test=y[half + n // 4 :],
+    )

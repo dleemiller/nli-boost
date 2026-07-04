@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# nli-boost artifacts
+runs/
+cache/
+
+# rewrite archive + model artifacts
+src-bak/
+models/
+models_*/

@@ -1,0 +1,4 @@
+run_name: trec
+seed: 7
+data: {name: trec}
+lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}

@@ -1,0 +1,4 @@
+run_name: sst2
+seed: 7
+data: {name: sst2}
+lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}

@@ -1,0 +1,6 @@
+# encoder finalization: reuse a fitted pool, re-score with the larger encoder
+run_name: trec_finalize_l
+seed: 7
+data: {name: trec}
+encoder: {model: dleemiller/finecat-nli-l}
+pool: {from_run: trec}
