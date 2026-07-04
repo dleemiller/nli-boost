@@ -107,8 +107,8 @@ def compare(run_a: Path, run_b: Path):
 def gepa_tune(
     out: Path = Path("models/proposer_instruction.json"),
     tune: str = "trec:7,sst2:7",
-    max_calls: int = 120,
-    timeout_min: float = 60.0,
+    max_calls: int = 700,
+    timeout_min: float = 90.0,
     pool_size: int = 28,
     sub_size: int = 400,
 ):

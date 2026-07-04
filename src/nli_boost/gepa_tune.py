@@ -151,8 +151,8 @@ def optimize_instruction(
     encoder: EncoderConfig | None = None,
     pool_size=28,
     sub_size=400,
-    max_metric_calls=120,
-    timeout_min=60.0,
+    max_metric_calls=700,  # ~dspy auto="light" scale; most calls are valset re-scores
+    timeout_min=90.0,
     seed=7,
     cache_dir=Path("cache"),
 ) -> dict:
