@@ -73,6 +73,13 @@ hypotheses). Extracted what's additive, what we already have, and what we jointl
   | evolution vs static pool (TREC, n=500) | +0.008 | 42 (19 / 23) | 0.644 | **not significant** |
   | lexical on/off (AG News, n=2000) | +0.0075 | 55 (20 / 35) | 0.058 | not significant (borderline) |
   | lexical on/off (TREC frozen pool, n=500) | −0.002 | 23 (12 / 11) | 1.000 | not significant |
+  | maxed vs baseline (trec_pro_l vs trec, n=500) | +0.026 | 29 (8 / 21) | **0.024** | **SIGNIFICANT** |
+
+  The maxed comparison is the first clean win under McNemar: `-l` encoder + pro proposer + fresh
+  pool beats the `-m`/flash baseline decisively (fixes 21, breaks 8). Confirms the METHOD.md
+  scaling story — capacity is the lever, selection is not. Caveat: it bundles 3 changes; prior
+  evidence (review #46: pro pool ≈ flash pool) attributes the gain to the encoder. Clean
+  attribution would need a frozen-pool -m→-l swap.
 
   - **The evolution result is the one that stings:** on TREC-500 the whole evolve loop (prune +
     refill) does NOT beat the raw generated pool at p<0.05 — it fixes 23 test items and breaks 19.
