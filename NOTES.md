@@ -79,6 +79,9 @@ Pre-registration (feasibility probe, before launch):
 - Cost/safety: est. ~30–45 min shared GPU (32×400 pairs/eval × 40 on -m), <$1 LM, trivial RAM
   (serial CV, 400×~56 matrices). Justification for >40-min soft cap: one-time methodology gate.
   GPU scoring lock-serialized, CV serial (n_jobs=1), GEPA num_threads=2 — no process forks, no OOM.
+- Interruptible: stops on max_calls OR timeout_min (default 40) OR `touch <out>.stop` OR Ctrl-C,
+  all keeping best-so-far; log_dir checkpoints every iteration so re-running the command resumes.
+  So it never needs to run to 100% — safe to stop when the GPU is needed for training.
 
 ### 2026-07-04 — hourly: plateau-epsilon tune REFUTED by trajectory calibration (no code change)
 

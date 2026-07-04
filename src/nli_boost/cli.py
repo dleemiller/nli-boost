@@ -108,17 +108,27 @@ def gepa_tune(
     out: Path = Path("models/proposer_instruction.json"),
     tune: str = "trec:7,sst2:7",
     max_calls: int = 40,
+    timeout_min: float = 40.0,
     pool_size: int = 28,
     sub_size: int = 400,
 ):
     """Offline GEPA tuning of the GeneratePool instruction. `tune` = comma list of
-    dataset:seed contexts (hold out any dataset used for the accept gate)."""
+    dataset:seed contexts (hold out any dataset used for the accept gate). Stops on
+    max_calls, timeout_min, `touch <out>.stop`, or Ctrl-C; re-run to resume."""
     from .gepa_tune import optimize_instruction
 
     specs = [(p.split(":")[0], int(p.split(":")[1])) for p in tune.split(",")]
-    r = optimize_instruction(out, specs, pool_size=pool_size, sub_size=sub_size, max_metric_calls=max_calls)
+    r = optimize_instruction(
+        out,
+        specs,
+        pool_size=pool_size,
+        sub_size=sub_size,
+        max_metric_calls=max_calls,
+        timeout_min=timeout_min,
+    )
     console.print(f"[bold]baseline reward geo-mean:[/bold] {r['baseline_geo_mean']}")
     console.print(f"[bold]tuned instruction saved:[/bold] {r['saved_to']}")
+    console.print(f"[dim]stop early: touch {r['stop_file']}  |  resume: re-run this command[/dim]")
     console.print(f"\n[dim]{r['tuned_instruction']}[/dim]")
 
 

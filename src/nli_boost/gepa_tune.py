@@ -25,6 +25,12 @@ from pathlib import Path
 import dspy
 import numpy as np
 from dspy.teleprompt.gepa.gepa_utils import ScoreWithFeedback
+from gepa.utils.stop_condition import (
+    FileStopper,
+    MaxMetricCallsStopper,
+    SignalStopper,
+    TimeoutStopCondition,
+)
 
 from .cache import ScoreCache
 from .config import DataConfig, EncoderConfig, LMConfig
@@ -146,10 +152,16 @@ def optimize_instruction(
     pool_size=28,
     sub_size=400,
     max_metric_calls=40,
+    timeout_min=40.0,
     seed=7,
     cache_dir=Path("cache"),
 ) -> dict:
-    """Feasibility-scale defaults (max_metric_calls=40). Returns the tuned instruction."""
+    """Feasibility-scale defaults (max_metric_calls=40). Returns the tuned instruction.
+
+    Stops on whichever comes first: max_metric_calls, timeout_min wall-clock, a
+    `touch <out>.stop` sentinel, or Ctrl-C/SIGTERM — all keep the best-so-far.
+    log_dir also checkpoints every iteration, so re-running the SAME command resumes.
+    """
     student_lm = student_lm or LMConfig()
     encoder = encoder or EncoderConfig()
     examples, bundles = build_contexts(tune_specs, pool_size, sub_size, seed)
@@ -166,6 +178,15 @@ def optimize_instruction(
 
     log_dir = out_path.parent / "gepa_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
+    stop_file = out_path.with_suffix(".stop")
+    # stop on whichever fires first; all return the best-so-far. MaxMetricCallsStopper
+    # is included because passing stop_callbacks overrides the built-in call cap.
+    stoppers = [
+        MaxMetricCallsStopper(max_metric_calls),
+        TimeoutStopCondition(timeout_min * 60.0),
+        FileStopper(str(stop_file)),
+        SignalStopper(),
+    ]
     dspy.configure(lm=_make_lm(student_lm))
     gepa = dspy.GEPA(
         metric=metric,
@@ -173,7 +194,8 @@ def optimize_instruction(
         max_metric_calls=max_metric_calls,
         track_stats=True,
         num_threads=2,  # GPU serialized by lock; keep CPU workers few (no-OOM rule)
-        log_dir=str(log_dir),
+        log_dir=str(log_dir),  # checkpoints every iteration -> resumable on re-run
+        gepa_kwargs={"stop_callbacks": stoppers},
     )
     compiled = gepa.compile(dspy.Predict(GeneratePool), trainset=examples, valset=examples)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -182,6 +204,8 @@ def optimize_instruction(
         "baseline_geo_mean": baseline,
         "tuned_instruction": compiled.signature.instructions,
         "saved_to": str(out_path),
+        "stop_file": str(stop_file),
+        "log_dir": str(log_dir),
     }
 
 
