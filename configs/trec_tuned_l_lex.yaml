@@ -1,0 +1,9 @@
+# Tuned instruction at -l PLUS the TF-IDF lexical channel — restores lexical signal the
+# semantic-purity reward may have trained the instruction to suppress (wh-word cues are real
+# signal for TREC question-type, not hacks). Run if trec_tuned_l under-performs trec_pro_l.
+run_name: trec_tuned_l_lex
+seed: 7
+data: {name: trec}
+encoder: {model: dleemiller/finecat-nli-l}
+lm: {instruction_path: models/proposer_instruction.json}
+lexical: {kind: tfidf_svd, dims: 128}

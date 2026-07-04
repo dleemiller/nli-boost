@@ -93,6 +93,22 @@ Two fixes committed as a result:
    run also carries the improved judge feedback, so a clean teacher ablation would re-run deepseek
    under the new feedback too; deferring that unless GLM's result is ambiguous.
 
+### 2026-07-04 — Testing tuned instruction at -l; lexical-suppression hypothesis pre-registered
+
+3-domain re-tune finished (sentiment leakage much reduced: v1 saturated with positive/negative/
+soundtrack/movie -> now only "sentiment/acting/plot" survive; no dataset names). Wired the tuned
+instruction into the proposer (lm.instruction_path, commit 6017690) and launched trec_tuned_l
+(tuned instruction + flash + -l) to compare against trec_pro_l (hand-written instruction + pro + -l,
+0.946/F1 0.9248). Caveat: proposer model differs (flash vs pro), so not a perfectly clean
+instruction-only A/B.
+
+**Pre-registered interpretation (Lee's point):** if trec_tuned_l UNDER-performs, a likely cause is
+that the tuned instruction suppresses LEXICAL/surface hypotheses — the reward penalizes them
+(semantic_not_surface judge criterion + length/vacuity hack penalty), but on TREC wh-word cues
+("starts with 'Who'") are LEGITIMATE question-type signal, not hacks. Remedy: re-run with the
+TF-IDF lexical channel (configs/trec_tuned_l_lex.yaml) to restore that signal externally; if that
+recovers the gap, it confirms the semantic-purity reward over-penalizes task-legitimate lexical cues.
+
 ### 2026-07-04 — Reward audited + rebuilt (all terms valuable, incremental), 3-domain re-tune launched
 
 Audited the reward on the completed run's 641-eval log — most terms were NOT valuable:
