@@ -93,6 +93,19 @@ Two fixes committed as a result:
    run also carries the improved judge feedback, so a clean teacher ablation would re-run deepseek
    under the new feedback too; deferring that unless GLM's result is ambiguous.
 
+### 2026-07-04 — hourly: cleaning up the instruction A/B (flash+baseline+-l — the missing cell)
+
+The GEPA verdict rests on an incomplete A/B. We have: flash+tuned+-l 0.946, pro+baseline+-l 0.946,
+flash+baseline+-m 0.920. MISSING: flash+baseline+-l. Without it we can't tell if the tuned
+instruction did anything, or if flash+baseline already reaches 0.946 at -l (instruction irrelevant).
+Launching trec_baseline_l (flash + hand-written instruction + -l) — the clean same-proposer A/B vs
+trec_tuned_l. Pre-registered decision rule:
+- flash+baseline+-l ≈ 0.946  => tuned instruction added NOTHING (hand-written prompt at ceiling; GEPA
+  delivered no value beyond a reusable loop). Most likely given equivalence so far.
+- flash+baseline+-l < 0.946 (e.g. ~0.93) => the tuned instruction LIFTED cheap flash to pro-level =>
+  GEPA delivered real value (better prompt compensates for a cheaper proposer).
+Then McNemar compare trec_baseline_l vs trec_tuned_l. ~26 min at -l; one-time, disambiguates verdict.
+
 ### 2026-07-04 — VERDICT: tuned instruction EQUALS hand-written at -l (no improvement, no regression)
 
 trec_tuned_l (GEPA-tuned instruction + flash + -l): **0.9460 / F1 0.9244**. vs trec_pro_l
