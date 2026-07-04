@@ -93,6 +93,19 @@ Two fixes committed as a result:
    run also carries the improved judge feedback, so a clean teacher ablation would re-run deepseek
    under the new feedback too; deferring that unless GLM's result is ambiguous.
 
+### 2026-07-04 — GEPA run PRODUCTIVE under new reward (hourly check, 2h in)
+
+Checkpoint read (not just liveness): total_num_evals 444, iteration 13, **12 candidates accepted**
+— vs only 2 under the old float-judge reward. The granular boolean+coverage reward gives GEPA a
+real gradient; latest instruction is heavily evolved (6983 chars, sim 0.017 to seed). This is the
+payoff of the session's rework (grounded booleans + continuous coverage + true parallelism).
+- Downside: at ~4/min and iter 13, auto='light' over valset=30 will run several more HOURS. Best-so-
+  far is checkpointed, so `touch models/proposer_instruction.stop` ends it early with the best kept.
+  Lesson for next time: valset=30 makes auto='light' a multi-hour job — use valset ~12-16 for a
+  genuinely quick light run, or medium/heavy only when you want the long search.
+- Verdict (reward vs new-scale baseline, dataset-agnostic read, -l ag_news transfer gate) pending
+  completion or a manual stop.
+
 ### 2026-07-04 — GEPA run >1h (hourly check): auto='light' scales with valset
 
 Run healthy and live at 1h02m / 357 evals (~4/min sustained; wal + evals fresh). Longer than
