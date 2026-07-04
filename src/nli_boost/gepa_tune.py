@@ -238,7 +238,10 @@ def optimize_instruction(
     dspy.configure(lm=_make_lm(student_lm))
     gepa = dspy.GEPA(
         metric=metric,
-        reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=32000),
+        # reflection is the SEQUENTIAL bottleneck (one call per GEPA step). 32k tokens let its
+        # reasoning run long; 10k is ample for a new instruction and much faster.
+        reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=10000),
+        reflection_minibatch_size=threads,  # amortize each slow reflection over `threads` parallel evals
         auto=auto,
         num_threads=threads,  # parallel LLM I/O; GPU is lock-serialized, CV capped -> safe
         track_stats=True,
