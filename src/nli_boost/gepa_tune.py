@@ -94,10 +94,12 @@ class PoolRewardMetric:
         if not pool:
             return ScoreWithFeedback(score=0.0, feedback="No usable hypotheses were produced.")
 
+        # Judge FIRST, outside the GPU lock: it's an LLM call needing only the hypothesis text, so
+        # the 8 worker threads issue judge requests CONCURRENTLY. (Before, each thread had to take
+        # its turn at the GPU lock before reaching the judge, which serialized the LLM requests.)
+        judge_score, judge_critique = self.judge(gold, pool) if self.judge else (None, "")
         with self._gpu:
             x = self.scorer.features(texts, pool)  # cache-through; GPU only on misses
-
-        judge_score, judge_critique = self.judge(gold, pool) if self.judge else (None, "")
         r = pool_reward(x, y, pool, texts, self.reward_cfg, judge_score=judge_score)
         feedback = f"[{gold.dataset}] {r['feedback']}"
         if judge_critique:  # the judge's SEMANTIC critique is the actionable signal for reflection
@@ -238,10 +240,7 @@ def optimize_instruction(
     dspy.configure(lm=_make_lm(student_lm))
     gepa = dspy.GEPA(
         metric=metric,
-        # reflection is the SEQUENTIAL bottleneck (one call per GEPA step). 32k tokens let its
-        # reasoning run long; 10k is ample for a new instruction and much faster.
-        reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=10000),
-        reflection_minibatch_size=threads,  # amortize each slow reflection over `threads` parallel evals
+        reflection_lm=dspy.LM(reflection_model, temperature=1.0, max_tokens=32000),
         auto=auto,
         num_threads=threads,  # parallel LLM I/O; GPU is lock-serialized, CV capped -> safe
         track_stats=True,
