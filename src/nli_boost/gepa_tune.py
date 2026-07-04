@@ -25,7 +25,6 @@ from pathlib import Path
 import dspy
 import numpy as np
 from dspy.teleprompt.gepa.gepa_utils import ScoreWithFeedback
-from pydantic import BaseModel
 
 from .cache import ScoreCache
 from .config import DataConfig, EncoderConfig, LMConfig
@@ -115,97 +114,64 @@ class PoolRewardMetric:
         return ScoreWithFeedback(score=r["score"], feedback=feedback)
 
 
-# BOOLEAN rubric. LLMs have no grounding for continuous 0-1 scores (known bad practice — they
-# collapse onto a few round anchors); a yes/no question is grounded. Reward VARIATION comes from
-# the QUANTITY of independent boolean criteria: N per-hypothesis criteria x M hypotheses + K
-# set-level criteria => the fraction-passing takes many distinct values and moves whenever any
-# single boolean flips. So we ask MANY criteria, not a few.
-_HYP_CRITERIA = (
-    "semantic",  # about the text's content/meaning, not surface form (length, punctuation, casing)
-    "verifiable",  # a single self-contained claim checkable from one text alone
-    "discriminative",  # not vacuous / true of almost any text; actually splits some texts
-    "non_duplicate",  # not a paraphrase or near-duplicate of another hypothesis in the set
-    "single_claim",  # exactly one property, not a compound "A and B" / "A or B" statement
-    "affirmative",  # phrased affirmatively rather than as a negation
-    "specific",  # concrete enough to be FALSE for a meaningful fraction of texts
-    "class_aligned",  # plausibly aligns with a real distinction among the target classes
-    "no_leakage",  # no reference to labels, the dataset, or the act of classification
-    "well_formed",  # a single declarative present-tense sentence about "the text"
-)
-_SET_CRITERIA = (
-    "covers_all_classes",  # every class, incl. minorities, has >=1 hypothesis aimed at it
-    "targets_minority_classes",  # deliberate hypotheses for the smaller/harder classes
-    "varied_specificity",  # mixes broad and narrow hypotheses rather than one granularity
-    "multiple_angles",  # spans topic, entity, intent, and style angles (not one kind)
-    "includes_contrastive",  # includes hypotheses that split GROUPS of classes apart
-    "low_overall_redundancy",  # few near-duplicate hypotheses across the whole set
-)
-
-_HypCheck = type(
-    "_HypCheck",
-    (BaseModel,),
-    {"__annotations__": {"index": int, **{c: bool for c in _HYP_CRITERIA}}},
-)
+# SET-LEVEL boolean rubric. LLMs can't ground continuous 0-1 scores (they collapse to a few round
+# anchors — known bad practice), so we ask many independent yes/no questions ABOUT THE WHOLE SET;
+# the judge score = fraction true. Set-level (not per-hypothesis) keeps the output tiny (~18 bools +
+# one short line) so a judge call is fast — the continuous cv/coverage terms already give the reward
+# its fine granularity, so the judge needn't emit 28x per-hypothesis checks.
+_SET_CRITERIA = {
+    "covers_all_classes": "every class, including minorities, has >=1 hypothesis aimed at it",
+    "targets_minority_classes": "there are deliberate hypotheses for the smaller/harder classes",
+    "fine_distinctions": "it distinguishes similar/confusable classes, not just broad groups",
+    "varied_specificity": "it mixes broad and narrow hypotheses rather than one granularity",
+    "angle_topic": "some hypotheses target topic/subject matter",
+    "angle_entity": "some target entities (people, places, orgs, objects)",
+    "angle_intent": "some target intent/purpose/function of the text",
+    "angle_syntax": "some target form/structure/phrasing cues",
+    "includes_contrastive": "it includes hypotheses that split GROUPS of classes apart",
+    "low_redundancy": "few near-duplicate/paraphrase hypotheses",
+    "mostly_semantic": "most are about content/meaning, not surface form (length, punctuation)",
+    "mostly_verifiable": "most are checkable from one text alone",
+    "mostly_discriminative": "few are vacuous / true of almost any text",
+    "mostly_specific": "most are concrete enough to be false for many texts",
+    "mostly_affirmative": "most are phrased affirmatively, not as negations",
+    "mostly_single_claim": "most express one property, not compound and/or claims",
+    "no_label_leakage": "none reference labels, the dataset, or classification",
+    "all_well_formed": "all are single declarative present-tense sentences about 'the text'",
+}
 
 
 def make_judge(judge_lm):
-    """Boolean-rubric pool judge. Each hypothesis gets 10 independent yes/no checks and the set
-    gets 6; the reward is the FRACTION of all booleans that pass — grounded per-item judgments
-    whose COUNT gives fine-grained variation (no ungrounded float scores). Per-criterion failure
-    counts + critique feed GEPA's reflection. Reasoning disabled (caller passes a no-reasoning LM)."""
-
+    """Fast set-level boolean judge: ~18 yes/no questions about the whole set + ONE short line of
+    critique. Score = fraction of booleans true (grounded; no float scores). Concise output keeps
+    the call fast. Caller passes a no-reasoning LM."""
     fields = {
         "task": (str, dspy.InputField()),
         "class_definitions": (list[str], dspy.InputField()),
         "hypotheses": (list[str], dspy.InputField()),
-        "checks": (
-            list[_HypCheck],
-            dspy.OutputField(desc="exactly one entry per hypothesis, same order; answer every boolean"),
-        ),
     }
-    _SET_DESC = {
-        "covers_all_classes": "every class, including minority classes, has >=1 hypothesis aimed at it",
-        "targets_minority_classes": "there are deliberate hypotheses for the smaller/harder classes",
-        "varied_specificity": "the set mixes broad and narrow hypotheses rather than one granularity",
-        "multiple_angles": "the set spans topic, entity, intent, and style angles, not just one kind",
-        "includes_contrastive": "the set includes hypotheses that split GROUPS of classes apart",
-        "low_overall_redundancy": "few near-duplicate hypotheses across the whole set",
-    }
-    for c in _SET_CRITERIA:
-        fields[c] = (bool, dspy.OutputField(desc=f"true if {_SET_DESC[c]}"))
-    fields["critique"] = (
+    for c, desc in _SET_CRITERIA.items():
+        fields[c] = (bool, dspy.OutputField(desc=f"true if {desc}"))
+    fields["fix"] = (
         str,
-        dspy.OutputField(
-            desc="Actionable: quote the 2-3 weakest hypotheses, name class distinctions the set "
-            "misses, and state the strategy change the GENERATOR should adopt. No class names."
-        ),
+        dspy.OutputField(desc="ONE short sentence: the single most useful strategy change for the generator"),
     )
     JudgePool = dspy.Signature(
         fields,
-        "Judge a set of NLI hypotheses used as features for a text classifier. For EACH hypothesis "
-        "(by index) answer all per-hypothesis yes/no checks, judged strictly and INDEPENDENTLY — "
-        "when in doubt answer false. Then answer the set-level yes/no checks and write a critique "
-        "aimed at improving the GENERATOR'S INSTRUCTIONS.",
+        "Judge a set of NLI hypotheses used as features for a text classifier. Answer each yes/no "
+        "question about the WHOLE set, strictly and independently (when in doubt, false). Then give "
+        "ONE short sentence of the most useful fix for the GENERATOR'S INSTRUCTIONS. Be concise.",
     )
-
     predict = dspy.Predict(JudgePool)
     predict.set_lm(judge_lm)  # dspy.context is forbidden in GEPA worker threads
 
     def judge(gold, pool):
         try:
             r = predict(task=gold.task, class_definitions=gold.class_definitions, hypotheses=pool)
-            checks = list(r.checks)[: len(pool)]
-            if not checks:
-                return 0.5, ""
-            hyp_pass = {c: sum(bool(getattr(ck, c, False)) for ck in checks) for c in _HYP_CRITERIA}
-            n_hyp_bool = len(checks) * len(_HYP_CRITERIA)
-            set_pass = {c: bool(getattr(r, c, False)) for c in _SET_CRITERIA}
-            # fraction of ALL booleans true (per-hypothesis + set-level pooled) -> many distinct levels
-            total_true = sum(hyp_pass.values()) + sum(set_pass.values())
-            score = total_true / (n_hyp_bool + len(_SET_CRITERIA))
-            hyp_bd = ", ".join(f"{c} {hyp_pass[c]}/{len(checks)}" for c in _HYP_CRITERIA)
-            set_bd = ", ".join(f"{c}={set_pass[c]}" for c in _SET_CRITERIA)
-            detail = f"judge per-hyp [{hyp_bd}]; set [{set_bd}]. {(r.critique or '').strip()}"
+            passed = {c: bool(getattr(r, c, False)) for c in _SET_CRITERIA}
+            score = sum(passed.values()) / len(passed)
+            failed = [c for c, ok in passed.items() if not ok]
+            detail = f"judge {sum(passed.values())}/{len(passed)}; failing: {', '.join(failed) or 'none'}. {(r.fix or '').strip()}"
             return score, detail
         except Exception:
             return 0.5, ""
@@ -221,7 +187,7 @@ def optimize_instruction(
     out_path: Path,
     tune_specs,
     reflection_model="openrouter/deepseek/deepseek-v4-pro",
-    judge_model="openrouter/deepseek/deepseek-v4-pro",
+    judge_model="openrouter/deepseek/deepseek-v4-pro",  # reasoning OFF; concise set-level rubric
     auto="light",  # dspy GEPA budget preset: light | medium | heavy (sets metric-call budget)
     threads=8,  # concurrent metric evals -> parallel OpenRouter calls (LLM I/O is the bottleneck)
     student_lm: LMConfig | None = None,
@@ -254,7 +220,13 @@ def optimize_instruction(
     print(f"--- GEPA: {len(trainset)} train + {len(valset)} val contexts, auto={auto!r}", flush=True)
 
     scorer = EntailmentScorer(encoder, ScoreCache(cache_dir / "nli_scores.sqlite"), CostTracker())
-    judge = make_judge(_make_lm(LMConfig(model=judge_model), reasoning=False)) if judge_model else None
+    # judge = grounded booleans only: NO reasoning, and a tight token cap (the structured output
+    # for the rubric fits well under 4k; the cap stops any runaway).
+    judge = (
+        make_judge(_make_lm(LMConfig(model=judge_model, max_tokens=4000), reasoning=False))
+        if judge_model
+        else None
+    )
     # concurrent evals share the GPU (lock-serialized) and each caps its CV to 2 threads, so with
     # `threads` workers total CPU threads stay ~2*threads (no OOM); the LLM calls run in parallel.
     metric = PoolRewardMetric(
