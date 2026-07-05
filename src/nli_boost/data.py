@@ -31,6 +31,18 @@ class Bundle:
         return len(self.class_names)
 
 
+def per_class_indices(y: np.ndarray, k: int, rng: np.random.Generator) -> np.ndarray:
+    """Exactly k indices per class (all of a class if it has fewer) — the K-shot setup."""
+    picked = []
+    for c in np.unique(y):
+        idx = np.flatnonzero(y == c)
+        rng.shuffle(idx)
+        picked.append(idx[: min(k, len(idx))])
+    out = np.concatenate(picked)
+    rng.shuffle(out)
+    return out
+
+
 def stratified_indices(y: np.ndarray, n: int, rng: np.random.Generator) -> np.ndarray:
     """~n indices stratified by class (all of a class if smaller than its share)."""
     classes, counts = np.unique(y, return_counts=True)
@@ -164,8 +176,12 @@ def load(cfg: DataConfig, seed: int) -> Bundle:
     if descriptions is None:
         descriptions = [f"{c}: {_NEWSGROUP_GLOSS.get(c, c)}" for c in classes]
 
-    idx = stratified_indices(y_train, cfg.train_size + cfg.val_size, rng)
-    tr, va = idx[: cfg.train_size], idx[cfg.train_size : cfg.train_size + cfg.val_size]
+    if cfg.shots_per_class is not None:  # K-shot: exactly N per class, no val
+        tr = per_class_indices(y_train, cfg.shots_per_class, rng)
+        va = np.array([], dtype=int)
+    else:
+        idx = stratified_indices(y_train, cfg.train_size + cfg.val_size, rng)
+        tr, va = idx[: cfg.train_size], idx[cfg.train_size : cfg.train_size + cfg.val_size]
     # test split uses its OWN seeded RNG so the test set depends only on (dataset, seed, test_size)
     # — NOT on train_size/val_size. Two runs that differ only in train size are then comparable
     # (same held-out test) instead of silently drawing different test rows.

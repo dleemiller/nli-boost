@@ -84,6 +84,17 @@ def test_dedup_exact_and_covariance():
     assert any("corr" in s for s in rejected2)
 
 
+def test_per_class_indices_is_exactly_k_per_class():
+    import numpy as np
+
+    from nli_boost.data import per_class_indices
+
+    y = np.array([0] * 3 + [1] * 100 + [2] * 50)  # imbalanced
+    idx = per_class_indices(y, 5, np.random.default_rng(0))
+    counts = {int(c): int((y[idx] == c).sum()) for c in np.unique(y)}
+    assert counts == {0: 3, 1: 5, 2: 5}  # exactly k=5, or all if the class has fewer
+
+
 def test_dataset_specs_are_complete():
     for name, spec in _SPECS.items():
         if spec["classes"] is not None:

@@ -213,23 +213,32 @@ Artifacts per run in `runs/<run_name>/`: `model.json` (the pool — the model is
 sentences — plus head params), `log.jsonl` (evolution audit trail: every prune with its reason),
 `metrics.json` (the single honest headline), `costs.json` (LM spend, encoder pairs, wall time).
 
-## What's measured
+## Results
 
-Full audit and per-decision measurements are in `NOTES.md`. Headlines on TREC-6 (2k train, seed 7,
-honest `pool_cv` protocol):
+Test accuracy, held-out test set, seed 7, honest `pool_cv` protocol (one test evaluation per run);
+the `config` column reproduces each. `*re-run*` = the stored number predates the current
+instruction/dedup/test-split and is being regenerated — don't cite it yet.
 
-- **The encoder is the one reliable accuracy lever** — `-m → -l` ≈ **+5 pts** (p=0.024). Instruction
-  wording, proposer model, pool size, and tree-structured prompting all wash out within noise at `-l`.
-- **Best single pool:** **0.934** at `-m`, **0.954** at `-l`. Adding the TF-IDF channel reaches
-  **0.964** (best point estimate; not significantly above the 0.956 plain-TF-IDF run, p=0.42).
-- **Averaging independent pools (a committee) reaches 0.964 robustly** — beating any single pool
-  without having to pick the lucky one.
-- **vs baselines** (ag_news / sst2): the method **beats TF-IDF decisively** (+4 to +24 pts) but only
-  **ties zero-shot NLI** — its edge is interpretable features that beat bag-of-words, concentrated on
-  multi-class carving (TREC, ag_news); on binary sentiment a single zero-shot hypothesis suffices.
+| Dataset | Config | Encoder | Train | Channels | Acc | Macro-F1 |
+|---|---|---|---|---|---|---|
+| TREC-6 | `trec_full` | finecat-nli-l | 5,452 (all) | NLI + TF-IDF | **0.964** | 0.960 |
+| TREC-6 | `trec_best_l_max` | finecat-nli-l | 2,000 | NLI + TF-IDF | **0.964** | 0.968 |
+| TREC-6 | `trec_best_l` | finecat-nli-l | 2,000 | NLI | 0.954 | 0.959 |
+| TREC-6 | `trec_lown` | finecat-nli-l | 5 / class | NLI (sts dedup, no evolve) | 0.666 | 0.631 |
+| TREC-6 | `trec` | finecat-nli-m | 2,000 | NLI | *re-run* | *re-run* |
+| AG News | `ag_news` | finecat-nli-m | 2,000 | NLI | *re-run* | *re-run* |
+| SST-2 | `sst2` | finecat-nli-m | 2,000 | NLI | *re-run* | *re-run* |
 
-The expected frontier is the **low-N** regime (2–5 examples/class), where transfer knowledge should
-matter most and a different pipeline applies — see [docs/low-n-plan.md](docs/low-n-plan.md).
+Baselines (TREC, same 500-example test): zero-shot NLI **0.632**, TF-IDF+LogReg **0.828**, majority
+0.13. AG News / SST-2 baselines: *re-run pending on the current test splits*.
+
+What the numbers say: the **encoder is the one reliable accuracy lever** (`-m`→`-l` ≈ +5 pts on TREC,
+p=0.024); instruction/proposer/pool-size choices wash out within noise at `-l`. Full-train **ties** the
+2k result (McNemar p=1.0 — TREC-500 saturates at 0.964, so the number is stable, not data-hungry). On
+TREC the method **crushes both baselines** (0.964 vs 0.83 TF-IDF, 0.63 zero-shot). **Low-N is the open
+frontier:** at 5 examples/class the default RF/HGB head overfits (128 features / 30 rows; cv-train 0.80
+≫ test 0.67), so it barely clears zero-shot — the lighter low-N pipeline (prior-aggregation head, sts
+dedup, no evolution) is future work; see [docs/low-n-plan.md](docs/low-n-plan.md).
 
 ## Development
 

@@ -12,6 +12,9 @@ class DataConfig(BaseModel):
     train_size: int = 2000
     val_size: int = 500
     test_size: int = 2000
+    # few-shot: exactly this many train examples PER CLASS (K-shot). Overrides train_size/val_size
+    # when set — the honest low-N setup (proportional sampling starves rare classes).
+    shots_per_class: int | None = None
 
 
 class EncoderConfig(BaseModel):

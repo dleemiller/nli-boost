@@ -1809,3 +1809,16 @@ runs/trec_best_l_max now works -> trec_full 0.962 vs best_l_max 0.964, delta +0.
 (Caveat: for datasets that SUBSAMPLE test, e.g. ag_news test_size 2000<7600, this changes which rows
 are drawn vs old runs — intended; the new invariant is worth it. TREC test=all 500, set unchanged.)
 27 affected tests pass, ruff clean.
+
+## 2026-07-05 — low-N (5/class) run + README results table with staleness placeholders
+
+Added exact K-shot sampling (DataConfig.shots_per_class + data.per_class_indices) — proportional
+stratified starves rare classes (TREC ABBR got 1 of 30). trec_lown (5/class, -l, sts dedup, no
+evolve, pool 64): **test 0.666, macroF1 0.631, cv_train 0.804**. Big cv_train>>test gap = the RF/HGB
+head OVERFITS (128 features on 30 rows); barely above TREC zero-shot 0.632. Confirms the low-N plan:
+the default head is wrong at low N; needs a lighter/prior-aggregation head (docs/low-n-plan.md).
+README "What's measured" prose -> Results TABLE (settings + train size). Per Lee, most stored numbers
+are STALE (trec -m 0.920 predates the answer-oriented instruction that hit 0.934; ag_news/sst2 predate
+current instruction+dedup AND the test-split fix changed their subset) -> marked "*re-run*"
+placeholders; only the current -l TREC numbers + low-N kept. TREC baselines valid (all-500 test
+unchanged); ag_news/sst2 baselines placeholdered.

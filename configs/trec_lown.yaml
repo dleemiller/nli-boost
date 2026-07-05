@@ -1,0 +1,17 @@
+# Low-N: exactly 5 examples PER CLASS (K-shot). sts (text-space) dedup since covariance/CV need data
+# we don't have; no evolution (rounds 0) — the pool is a pure LM prior. How the method does at 5/class.
+run_name: trec_lown
+seed: 7
+data:
+  name: trec
+  shots_per_class: 5 # exactly 5 train examples per class (not proportional)
+  test_size: 2000 # -> all 500 test
+encoder:
+  model: dleemiller/finecat-nli-l # NLI cross-encoder (HuggingFace)
+lm:
+  model: openrouter/deepseek/deepseek-v4-flash # hypothesis proposer (litellm / OpenRouter id)
+dedup:
+  kind: sts # data-free text-similarity dedup (covariance needs data)
+pool:
+  size: 64
+  rounds: 0 # no evolution at low N (CV over ~5/class is noise)
