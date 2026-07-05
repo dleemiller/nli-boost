@@ -1781,3 +1781,20 @@ rounds, rank-subsample held-out peaked ~0.90), now fitting CV head on 5452x62 hy
 0.964 (more train data -> cleaner head + evolution signal; but TREC-500 test noise ~0.5-1pt means
 "meet" is plausible). Verdict on completion: pool_cv acc+macroF1, read shipped hypotheses for
 reward-hacking, McNemar vs best_l_max. No new job launched (headline run in flight).
+
+## 2026-07-05 — trec_full VERDICT: full-train ties 2k on accuracy, better calibrated
+
+trec_full (best recipe -l + tfidf_svd 128 + evolve, FULL 5452 TREC train, from scratch, same 500 test):
+**acc 0.964, macroF1 0.9602, logloss 0.1822, cv_train 0.9365.** vs best_l_max (2000 train): acc 0.964,
+macroF1 0.968, logloss 0.2262, cv_train 0.919. Pre-registered "meet-or-beat 0.964" -> MET (exactly:
+482/500 both). More train data: SAME test accuracy (TREC-500 saturated at ~0.964 for this recipe),
+better calibration (logloss 0.226->0.182) + higher train-CV; macroF1 -0.008 (≈1 small-class example,
+noise). Headline reportable: **0.964, stable across 2k<->5.4k train** (not data-hungry). Pool: 62 hyps,
+clean (7 legit question-type surface features + answer/intent), no reward-hacking.
+
+TOOL BUG found: `compare` refused the McNemar ("mismatched test sets: trec/seed7 vs trec/seed7") —
+different train_size/val_size consume the shared RNG differently before the test draw, so both take
+ALL 500 test but in different shuffle order -> np.array_equal fails though the SET is identical.
+Accuracies identical so verdict unaffected. Fix option (Lee's call): draw the test split from a
+seed-only RNG independent of train/val sizes — but that changes which test rows are drawn when
+test_size < len(test) (e.g. ag_news), invalidating existing runs' test sets; deferred.
