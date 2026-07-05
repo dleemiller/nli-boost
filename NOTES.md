@@ -1333,3 +1333,21 @@ Verdict: instruction now produces clean distinct answer-oriented hyps (genuine v
 enrichment). Answer-LENGTH axis (ENTY/DESC discriminator) still light — but that's the intrinsic
 ceiling, not worth pushing. Whether it lifts final accuracy needs a full run on a dataset where
 answer-type ambiguity is the failure mode (TREC ceiling already hit).
+
+### 2026-07-04 — lexical remedy result: TF-IDF closes the tuned pool's gap (diagnosis confirmed)
+
+trec_tuned_l_lex (tuned instruction + TF-IDF channel): 0.956/F1 0.935.
+- vs trec_tuned_l (tuned, no lexical) 0.946: +0.010; McNemar 0.948->0.956 p=0.50 (right direction,
+  within TREC-500 noise).
+- vs trec_baseline_l (hand-written) 0.952: McNemar 0.956 vs 0.958 p=1.0 — EQUAL. The TF-IDF channel
+  fully recovers the ~1pt the tuned instruction lost by suppressing wh-word features (13->1).
+Confirms the lexical-suppression mechanism directionally: restoring lexical signal externally brings
+the semantics-only tuned pool back to parity with the hand-written pool. All configs cluster ~0.95
+(TREC-500 noise floor). CLOSES the instruction-tuning arc:
+- GEPA-tuned instruction: no accuracy benefit (= hand-written); it also SUPPRESSES task-legit lexical
+  features, recoverable via the TF-IDF channel.
+- Proposer model (flash vs pro): no benefit.
+- Encoder (-m->-l): the only significant lever.
+- Covariance deduper: = STS, dropped the STS dependency.
+- Answer-oriented instruction style: added + tweaked; produces clean distinct hypotheses (vocabulary
+  enrichment; untested on a dataset where answer-type ambiguity is the failure mode).
