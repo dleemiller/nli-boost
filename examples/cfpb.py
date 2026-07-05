@@ -87,7 +87,7 @@ def main():
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import OneHotEncoder
 
-    from nli_boost import HypothesisVectorizer
+    from hypothesis_vectorizer import HypothesisVectorizer
 
     df = load_frame(args.limit, per_class=args.per_class)
     if args.per_class is not None:

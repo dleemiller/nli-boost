@@ -1,4 +1,4 @@
-"""nli-boost: text classification from LM-written NLI hypotheses.
+"""hypothesis-vectorizer: text classification from LM-written NLI hypotheses.
 
 A frozen NLI cross-encoder scores whether each text entails each of ~64
 LM-written hypotheses; those scores are features for a CV-disciplined

@@ -15,7 +15,7 @@ from sklearn.pipeline import Pipeline
 
 from conftest import FakeProposer, TextOnlyDeduper
 
-from nli_boost.vectorizer import HypothesisVectorizer
+from hypothesis_vectorizer.vectorizer import HypothesisVectorizer
 
 
 class _FakeScorer:
@@ -168,8 +168,8 @@ def test_from_run(tmp_path):
 
 
 def test_fit_generates_when_no_hypotheses(monkeypatch):
-    import nli_boost.dedup as dedup_mod
-    import nli_boost.proposer as prop_mod
+    import hypothesis_vectorizer.dedup as dedup_mod
+    import hypothesis_vectorizer.proposer as prop_mod
 
     fake = FakeProposer(generate_batches=[["hypothesis A", "hypothesis B", "hypothesis C"]])
     monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
@@ -183,7 +183,7 @@ def test_fit_generates_when_no_hypotheses(monkeypatch):
 
 
 def test_sts_deduper_drops_near_duplicates(monkeypatch):
-    from nli_boost.dedup import STSDeduper
+    from hypothesis_vectorizer.dedup import STSDeduper
 
     # fake embeddings: first word one-hot -> same first word = cosine 1.0
     def fake_embed(self, texts):
@@ -201,7 +201,7 @@ def test_sts_deduper_drops_near_duplicates(monkeypatch):
 
 
 def test_fit_dedup_accepts_custom_object_and_rejects_unknown(monkeypatch):
-    import nli_boost.proposer as prop_mod
+    import hypothesis_vectorizer.proposer as prop_mod
 
     fake = FakeProposer(generate_batches=[["h one", "h two"]])
     monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
@@ -215,8 +215,8 @@ def test_fit_dedup_accepts_custom_object_and_rejects_unknown(monkeypatch):
 
 
 def test_fit_passes_baseline_features_to_evolution(monkeypatch):
-    import nli_boost.evolve as evolve_mod
-    import nli_boost.proposer as prop_mod
+    import hypothesis_vectorizer.evolve as evolve_mod
+    import hypothesis_vectorizer.proposer as prop_mod
 
     fake = FakeProposer(generate_batches=[["h one", "h two"]])
     monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
@@ -241,8 +241,8 @@ def test_fit_passes_baseline_features_to_evolution(monkeypatch):
 
 
 def test_fit_evolves_when_enabled(monkeypatch):
-    import nli_boost.dedup as dedup_mod
-    import nli_boost.proposer as prop_mod
+    import hypothesis_vectorizer.dedup as dedup_mod
+    import hypothesis_vectorizer.proposer as prop_mod
 
     fake = FakeProposer(
         generate_batches=[[f"gen {i}" for i in range(8)]],
@@ -261,7 +261,7 @@ def test_fit_evolves_when_enabled(monkeypatch):
 
 
 def test_fixed_hypotheses_prepended_and_protected(monkeypatch):
-    import nli_boost.proposer as prop_mod
+    import hypothesis_vectorizer.proposer as prop_mod
 
     # provided-hypotheses path: fixed come first, duplicates collapsed
     v = HypothesisVectorizer(["h a", "FIX one"], fixed_hypotheses=["FIX one", "FIX two"]).fit()

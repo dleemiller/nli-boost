@@ -1,4 +1,4 @@
-# nli-boost: the method we landed at
+# hypothesis-vectorizer: the method we landed at
 
 Text classification with a **frozen NLI cross-encoder** and **LM-written natural-language
 hypotheses as features**. No gradient touches any neural weight; task adaptation lives in
@@ -142,6 +142,6 @@ Reference points: TF-IDF 0.828, zero-shot NLI (`-m`) 0.356, fine-tuned BERT ~96�
 
 - `runs/<name>/log.jsonl` — every hypothesis tried/pruned/refilled per round, with reasons,
   held-out accuracy, refill target-AUCs
-- `nli-boost audit` — reward-hacking signatures (val-gain collapse, length correlation)
-- `nli-boost diagnose` — error decomposition (coverage / redundancy / fit gaps / label noise)
+- `hypothesis-vectorizer audit` — reward-hacking signatures (val-gain collapse, length correlation)
+- `hypothesis-vectorizer diagnose` — error decomposition (coverage / redundancy / fit gaps / label noise)
 - the NLI score cache — every rerun and post-hoc analysis is ~free

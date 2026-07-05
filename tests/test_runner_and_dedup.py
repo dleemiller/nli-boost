@@ -2,10 +2,10 @@ import json
 
 from conftest import FakeProposer, FakeScorer, TextOnlyDeduper, make_bundle
 
-from nli_boost.config import DataConfig, PoolConfig, RunConfig
-from nli_boost.data import _SPECS
-from nli_boost.dedup import Deduper, norm_statement
-from nli_boost.runner import run
+from hypothesis_vectorizer.config import DataConfig, PoolConfig, RunConfig
+from hypothesis_vectorizer.data import _SPECS
+from hypothesis_vectorizer.dedup import Deduper, norm_statement
+from hypothesis_vectorizer.runner import run
 
 
 def _cfg(tmp_path, **pool_kwargs) -> RunConfig:
@@ -87,7 +87,7 @@ def test_dedup_exact_and_covariance():
 def test_per_class_indices_is_exactly_k_per_class():
     import numpy as np
 
-    from nli_boost.data import per_class_indices
+    from hypothesis_vectorizer.data import per_class_indices
 
     y = np.array([0] * 3 + [1] * 100 + [2] * 50)  # imbalanced
     idx = per_class_indices(y, 5, np.random.default_rng(0))

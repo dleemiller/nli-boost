@@ -1,8 +1,8 @@
 import numpy as np
 from conftest import FakeProposer, FakeScorer, TextOnlyDeduper, make_bundle
 
-from nli_boost.config import PoolConfig
-from nli_boost.evolve import evolve, hotspots, rank_hypotheses
+from hypothesis_vectorizer.config import PoolConfig
+from hypothesis_vectorizer.evolve import evolve, hotspots, rank_hypotheses
 
 
 def test_rank_informative_hypotheses_first():

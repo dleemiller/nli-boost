@@ -1,5 +1,5 @@
 # Fully-commented reference config: every knob, with its default. Copy and trim.
-# Run with: uv run nli-boost run configs/example.yaml
+# Run with: uv run hypothesis-vectorizer run configs/example.yaml
 
 run_name: example
 seed: 7

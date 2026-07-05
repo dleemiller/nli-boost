@@ -1,4 +1,4 @@
-# nli-boost
+# hypothesis-vectorizer
 
 Interpretable text classification from **LM-written NLI hypotheses**. An LLM writes ~64 short English
 sentences ("hypotheses"); a frozen NLI cross-encoder
@@ -15,7 +15,7 @@ Two clean halves:
   separate `train` extra so inference installs stay light.
 
 ```python
-from nli_boost import HypothesisVectorizer
+from hypothesis_vectorizer import HypothesisVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import HistGradientBoostingClassifier
 
@@ -41,8 +41,8 @@ clf.predict(new_texts)
 ## Install
 
 ```bash
-pip install nli-boost           # inference only: encoder + sklearn, no dspy
-pip install "nli-boost[train]"  # + hypothesis generation/evolution (dspy), dataset loading, CLI
+pip install hypothesis-vectorizer           # inference only: encoder + sklearn, no dspy
+pip install "hypothesis-vectorizer[train]"  # + hypothesis generation/evolution (dspy), dataset loading, CLI
 ```
 
 Developing from source (`uv sync` installs the dev group, which includes the `train` extra):
@@ -166,13 +166,13 @@ vec = HypothesisVectorizer(
 
 ## Training: producing a pool
 
-Needs the `train` extra (`pip install "nli-boost[train]"`). Either drive it from a YAML config with the CLI, or let the vectorizer's
+Needs the `train` extra (`pip install "hypothesis-vectorizer[train]"`). Either drive it from a YAML config with the CLI, or let the vectorizer's
 `fit` generate a static pool.
 
 ```bash
-uv run nli-boost run configs/trec.yaml     # generate -> evolve -> CV head -> one test eval
-uv run nli-boost report                    # pool_cv results across runs/
-uv run nli-boost compare runs/a runs/b     # paired McNemar: is a delta real or noise?
+uv run hypothesis-vectorizer run configs/trec.yaml     # generate -> evolve -> CV head -> one test eval
+uv run hypothesis-vectorizer report                    # pool_cv results across runs/
+uv run hypothesis-vectorizer compare runs/a runs/b     # paired McNemar: is a delta real or noise?
 ```
 
 [`configs/example.yaml`](configs/example.yaml) documents every config knob (encoder / proposer-LM /
@@ -180,7 +180,7 @@ sts-dedup models, dedup backend + threshold, pool size/rounds, `fixed_hypotheses
 the other configs are the maintained recipes (`trec`, `trec_best_l`, `trec_best_l_max` = the 0.964
 recipe, `trec_finalize_l` = re-score a fitted pool with a bigger encoder, `ag_news`, `sst2`).
 
-The full pipeline (`nli-boost run`) is:
+The full pipeline (`hypothesis-vectorizer run`) is:
 
 1. **Generate** — the LLM proposes hypotheses from the task + class definitions + sampled examples.
 2. **Dedup (covariance)** — reject a candidate whose entail-score vector correlates > `dedup_corr`
@@ -196,7 +196,7 @@ The full pipeline (`nli-boost run`) is:
 the data — a standard sklearn `fit`, just needing the `train` extra and the task metadata:
 
 ```python
-from nli_boost import HypothesisVectorizer
+from hypothesis_vectorizer import HypothesisVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import HistGradientBoostingClassifier
 
@@ -219,7 +219,7 @@ vec.save("my_pool.json")        # persist hypotheses+encoder for later dspy-free
 
 `evolve=False` (default) stops at a static generated pool (fast, one LM pass): ~0.956 on TREC through
 the sklearn workflow. `evolve=True` runs the full CV-prune/refill loop inside `fit` for the strongest
-pool (~0.964), at the cost of more LM calls and encoder passes. The CLI `nli-boost run` does the same
+pool (~0.964), at the cost of more LM calls and encoder passes. The CLI `hypothesis-vectorizer run` does the same
 training end-to-end from a YAML config; either way, serve the result with
 `HypothesisVectorizer.from_run(...)` / `load(...)`.
 

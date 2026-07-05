@@ -158,7 +158,7 @@ _SPECS = {
 
 
 def load(cfg: DataConfig, seed: int) -> Bundle:
-    from datasets import load_dataset  # train extra; keeps `nli_boost.data` importable without it
+    from datasets import load_dataset  # train extra; keeps `hypothesis_vectorizer.data` importable without it
 
     spec = _SPECS[cfg.name]
     rng = np.random.default_rng(seed)

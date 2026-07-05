@@ -7,7 +7,7 @@ uninformative contradiction half.
 
 import numpy as np
 
-from nli_boost.data import Bundle
+from hypothesis_vectorizer.data import Bundle
 
 
 class FakeScorer:
@@ -51,7 +51,7 @@ class TextOnlyDeduper:
     """Real textual dedup behavior without the STS model."""
 
     def filter(self, candidates, against, seen):
-        from nli_boost.dedup import norm_statement
+        from hypothesis_vectorizer.dedup import norm_statement
 
         kept, rejected = [], []
         for c in candidates:

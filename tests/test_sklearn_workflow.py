@@ -18,8 +18,8 @@ RUN = "runs/trec_best_l_max"
 
 
 def _pipeline():
-    from nli_boost import HypothesisVectorizer
-    from nli_boost.config import RunConfig
+    from hypothesis_vectorizer import HypothesisVectorizer
+    from hypothesis_vectorizer.config import RunConfig
     from sklearn.decomposition import TruncatedSVD
     from sklearn.ensemble import HistGradientBoostingClassifier
     from sklearn.feature_extraction.text import TfidfVectorizer
@@ -49,7 +49,7 @@ def _pipeline():
 
 
 def test_sklearn_pipeline_reproduces_0964():
-    from nli_boost.data import load
+    from hypothesis_vectorizer.data import load
     from sklearn.base import clone
 
     pipe, cfg = _pipeline()

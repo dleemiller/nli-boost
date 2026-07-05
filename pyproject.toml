@@ -1,5 +1,5 @@
 [project]
-name = "nli-boost"
+name = "hypothesis-vectorizer"
 version = "0.3.0"
 description = "Interpretable text classification from LLM-written NLI hypotheses scored by a frozen cross-encoder, as scikit-learn features"
 readme = "README.md"
@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Training: hypothesis generation/evolution (LM), dataset loading, the CLI.
-# A real extra (ships in wheel metadata) so `pip install "nli-boost[train]"` works.
+# A real extra (ships in wheel metadata) so `pip install "hypothesis-vectorizer[train]"` works.
 train = [
     "datasets>=5.0.0",
     "dspy>=3.2.1",
@@ -26,14 +26,14 @@ train = [
 ]
 
 [project.scripts]
-nli-boost = "nli_boost.cli:app"
+hypothesis-vectorizer = "hypothesis_vectorizer.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nli_boost"]
+packages = ["src/hypothesis_vectorizer"]
 
 [tool.uv]
 # dev group (which pulls in the train extra) is installed by default for `uv sync`.
@@ -48,7 +48,7 @@ src = ["src", "tests"]
 
 [dependency-groups]
 dev = [
-    "nli-boost[train]",  # dev/test env always has the training side (tests exercise it via fakes)
+    "hypothesis-vectorizer[train]",  # dev/test env always has the training side (tests exercise it via fakes)
     "pre-commit>=4.6.0",
     "pytest>=9.1.1",
     "ruff>=0.15.20",

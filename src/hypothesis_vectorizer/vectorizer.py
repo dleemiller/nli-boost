@@ -66,7 +66,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
     task, class_definitions, class_names, n_hypotheses, lm, evolve, random_state
         Generation knobs, used ONLY by ``fit(X, y)`` when ``hypotheses`` is None — the
         pool is then generated from the data via the LM proposer, which requires the
-        ``train`` extra (``pip install "nli-boost[train]"``). Ignored when ``hypotheses``
+        ``train`` extra (``pip install "hypothesis-vectorizer[train]"``). Ignored when ``hypotheses``
         is supplied. ``evolve=True`` additionally refines the generated pool with the
         CV-prune/refill loop (stronger pool, more LM calls); ``evolve=False`` (default)
         stops at a static pool. ``random_state`` seeds example sampling and evolution.
@@ -242,7 +242,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
             from .proposer import Proposer, generate_pool  # train extra: pulls dspy
         except ImportError as e:  # pragma: no cover - depends on install
             raise ImportError(
-                'Generating hypotheses needs the training dependencies: pip install "nli-boost[train]".'
+                'Generating hypotheses needs the training dependencies: pip install "hypothesis-vectorizer[train]".'
             ) from e
         from .config import LMConfig
         from .data import labeled_examples
