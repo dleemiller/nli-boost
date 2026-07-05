@@ -1,0 +1,10 @@
+# Missing grid cell: PRO proposer + GEPA-tuned instruction + -l. Completes the 2x2
+# (proposer: flash/pro) x (instruction: hand-written/tuned) at -l.
+run_name: trec_pro_tuned_l
+seed: 7
+data: {name: trec}
+encoder: {model: dleemiller/finecat-nli-l}
+lm:
+  model: openrouter/deepseek/deepseek-v4-pro
+  instruction_path: models/proposer_instruction.json
+  extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}
