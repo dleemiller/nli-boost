@@ -1538,3 +1538,40 @@ Decision (Lee's call): the PROXY is the problem, not the mechanism.
 First confirm on a 2nd seed that grow-select underperforms blind-swap before reverting the committed
 default (785e051): within-run corr is strong (n=1 run), cross-method test gap still one seed. No code
 reverted, no full run launched (cron did the cheap diagnostic only).
+
+## 2026-07-04 (hourly) — PRE-REGISTER: is the overfit fixable by a bigger held-out? (cached, no GPU)
+
+Follow-up to the corr(rank800-heldout, test)=-0.585 finding. Question gating option (b): would a
+LARGER held-out be an honest selection signal, or is the overfit intrinsic to selection pressure?
+Cheap test (checkpoint pools already cached on full train+test): per growselect checkpoint, compute a
+FULL-TRAIN (2000) 4-fold CV accuracy and correlate with test, vs the rank_sample(800) held-out.
+EXPECTATION: if the proxy problem is SIZE/noise, full-train CV correlates POSITIVELY with test ->
+option (b) with a bigger/independent held-out is validated. If full-train CV ALSO anti-correlates with
+test, the overfit is from selection pressure itself (fitting folds), not held-out size -> favors (a)
+revert or true nested CV (select and validate on disjoint splits). CPU only, features cached.
+
+## 2026-07-05 (hourly) — RESULT: overfit is a SELECTION ARTIFACT; option (b) validated but signal weak
+
+Per growselect checkpoint (cached, CPU): rank800 held-out (the SELECTION TARGET) vs an INDEPENDENT
+full-train(2000) 4-fold CV vs test:
+  round:      0     1     2     3     4     5     6     7     8     9
+  rank800_ho: .9114 .9164 .9176 .9226 .9226 .9276 .9276 .9313 .9313 .9313  (monotone; it's optimized)
+  fulltr_cv : .9140 .9135 .9140 .9125 .9125 .9220 .9220 .9145 .9145 .9145  (FLAT ~.913-.922)
+  test      : .9540 .9620 .9520 .9560 .9560 .9560 .9560 .9480 .9480 .9480
+corr(rank800_ho, test) = -0.585 ; corr(fulltrain2000_cv, test) = +0.126.
+
+Interpretation: the -0.585 anti-correlation is a SELECTION ARTIFACT — optimizing the rank800 held-out
+inflates it (0.9114->0.9313) while the INDEPENDENT 2000-CV never rises (stays flat) and test drifts
+down. An independent held-out is NOT anti-correlated (+0.126) => option (b) [select/validate on a
+DISJOINT split, nested CV] removes the active harm — VALIDATED as the fix. BUT +0.126 is weak: the
+independent CV barely predicts test, and the checkpoint test wiggle (0.948-0.962) is near the TREC-500
+noise floor (~1pt). So option (b) mainly PREVENTS HARM; it won't deliver big gains on TREC because
+there's little real headroom (round 0-1 already ~0.954-0.962; further optimization chases noise).
+
+Updated recommendation for Lee:
+- (b) nested/independent held-out for the accept gate + selection = the principled fix; do this if
+  keeping grow-then-select. Temper expectations (weak signal on TREC).
+- Given the weak signal, a lighter touch also works: cap rounds low (round 1 was best) or revert to
+  blind-swap (a) whose churn regularized to 0.964. On TREC these are all within noise of each other.
+- The real test of any fix is a dataset with genuine evolution headroom (20ng / ag_news), NOT TREC.
+No code changed, CPU-only cached analysis (no GPU, Lee's training untouched).
