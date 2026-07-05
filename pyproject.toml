@@ -1,7 +1,7 @@
 [project]
 name = "nli-boost"
 version = "0.1.0"
-description = "Interpretable text classifiers from LLM-proposed NLI hypotheses: decision trees and gradient boosting with natural-language splits"
+description = "Interpretable text classification from LLM-written NLI hypotheses scored by a frozen cross-encoder, as scikit-learn features"
 readme = "README.md"
 requires-python = ">=3.11"
 # Inference core: HypothesisVectorizer needs only the encoder + sklearn. No LM/dspy.

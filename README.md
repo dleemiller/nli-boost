@@ -1,129 +1,146 @@
 # nli-boost
 
-Text classification from **LM-written NLI hypotheses**: a frozen NLI cross-encoder
-([finecat](https://huggingface.co/dleemiller/finecat-nli-m)) scores whether each text entails
-each of ~64 English sentences written by an LLM; those scores are features for a CV-disciplined
-classical head. No fine-tuning anywhere — task adaptation lives in the sentences.
+Interpretable text classification from **LM-written NLI hypotheses**. An LLM writes ~64 short English
+sentences ("hypotheses"); a frozen NLI cross-encoder
+([finecat](https://huggingface.co/dleemiller/finecat-nli-l)) scores, for each input text, how strongly
+it **entails** and **contradicts** each hypothesis; those scores are the features for a
+CV-disciplined classical head (RandomForest / HistGradientBoosting). Nothing is fine-tuned — task
+adaptation lives entirely in the sentences, so the model *is* a readable list of hypotheses.
 
-**See [METHOD.md](METHOD.md)** for the full process and the measurement behind every design
-choice. TREC-6 with 2k training examples, current recipe (seed 7): **0.934** test accuracy at `-m`
-and **0.954** at `-l`, ~7 minutes and under $0.01 per fit. (The original instruction spanned
-0.916–0.938 across seeds at `-m`; the answer-oriented instruction below is what raised the `-m`
-number.)
+Two clean halves:
 
-## Current best recipe
-
-The configuration that wins on TREC today (`configs/trec_best_l.yaml`):
-
-- **Encoder `finecat-nli-l`** — the one lever that reliably moves accuracy (`-m`→`-l` ≈ +5 pts,
-  p=0.024). Everything else below is within noise at `-l`; the encoder is where the accuracy is.
-- **Hand-written answer-oriented instruction** (the code default) — each hypothesis describes both
-  the question and the *answer form* it implies (e.g. *"equivalent to asking someone to name a
-  person"* / *"can be answered with a short proper name"*). Automated tuning of this instruction
-  was neutral (McNemar p≈1.0), so it stays hand-written.
-- **Covariance dedup** — reject a candidate whose entail-score vector correlates >0.95 with a kept
-  hypothesis (removes *behavioral* duplicates that text-similarity dedup misses).
-- **Pool of 64, evolved** — generate → rank by CV permutation-importance + cross-fold stability →
-  prune confident deaths, refill against confusion hot-spots → repeat to a held-out plateau.
-- **CV-selected classical head** (RF / HistGBM) over the entail+contradict features.
-
-Result (seed 7): **0.934** at `-m`, **0.954** at `-l`. The answer-oriented instruction is what
-lifts `-m` — the original instruction scored 0.920 at the same seed/dedup (`trec`), the
-answer-oriented one 0.934 (`trec_newinstr`, +0.014). At `-l` that gain washes into the ~0.95
-saturation band (`baseline_l` 0.952), so the instruction is only measured to help at `-m`. The new
-instruction is currently validated at seed 7 only. ~7 min and <$0.01 per fit, and the model is a
-human-readable list of ~64 English sentences.
-
-**Add the lexical channel when inference cost matters** (`configs/trec_best_l_max.yaml`:
-`lexical: {kind: tfidf_svd, dims: 128}`). TF-IDF is ~free at prediction time, while every NLI
-hypothesis is a cross-encoder forward pass. So the lexical block joins evolution as a **fixed
-baseline** and NLI hypotheses are pruned by their **marginal value over TF-IDF** — a hypothesis
-whose signal TF-IDF already carries dies. The NLI pool (and thus per-prediction cost) shrinks to
-only the hypotheses carrying semantics lexical can't reach, in the same accuracy band. Best point
-estimate to date: **0.964** at `-l` (seed 7), though not yet significantly above the plain-TF-IDF
-run (0.956, McNemar p=0.42) — treat as promising, not established.
-
-> This recipe targets the **data-rich** regime. The method's expected edge is at **low-N**
-> (2–5 examples/class), where a different pipeline applies (evolution off, prior-selected
-> hypotheses, STS dedup, light head) — see [docs/low-n-plan.md](docs/low-n-plan.md).
-
-## Setup
-
-```bash
-uv sync
-echo 'OPENROUTER_API_KEY=sk-or-...' > .env   # the hypothesis proposer LM
-uv run pre-commit install
-```
-
-## Usage
-
-Training (produces a pool) needs the `train` extras (`dspy`, dataset loading, CLI):
-
-```bash
-uv run nli-boost run configs/trec.yaml            # full method: generate -> evolve -> head -> test
-uv run nli-boost run configs/trec_finalize_l.yaml # reuse a fitted pool, re-score with -l encoder
-uv run nli-boost report                           # pool_cv results across runs
-uv run nli-boost compare runs/a runs/b            # paired McNemar: is a delta real or noise?
-```
-
-### Inference: `HypothesisVectorizer`
-
-Inference is just NLI scoring against a fixed hypothesis list — **no LM, no dspy**. `HypothesisVectorizer`
-is a scikit-learn transformer: it turns a column of text into features by scoring, for each text, how
-strongly it entails (and contradicts) each hypothesis. Install inference-only with `pip install
-nli-boost` (core deps); the `train` dependency-group adds what's needed to *generate* pools.
+- **Inference** is just NLI scoring against a fixed hypothesis list → a scikit-learn transformer,
+  [`HypothesisVectorizer`](#inference-hypothesisvectorizer). No LM, no `dspy`.
+- **Training** generates + evolves the hypothesis list from labeled data (needs an LLM). Kept in a
+  separate `train` dependency group so inference installs stay light.
 
 ```python
 from nli_boost import HypothesisVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import HistGradientBoostingClassifier
 
-vec = HypothesisVectorizer.from_run("runs/trec_best_l")     # encoder (config.yaml) + pool (model.json)
+vec = HypothesisVectorizer.from_run("runs/trec_best_l")   # load a trained pool + its encoder
 clf = Pipeline([("hyp", vec), ("clf", HistGradientBoostingClassifier())]).fit(texts, y)
 clf.predict(new_texts)
 ```
 
-**Constructor** — `HypothesisVectorizer(hypotheses, *, encoder="dleemiller/finecat-nli-l",
-score_mode="entail_contradict", device="cuda", batch_size=128, max_text_chars=1200, cache_path=None)`.
-Standard sklearn params (introspectable via `get_params`/`set_params`, works with `clone`/`GridSearchCV`).
+## Install
 
-**Fit** — `fit(X, y)` fixes the hypothesis set. If you passed `hypotheses`, it's used as-is (pure
-transformer, no LM). If not, the pool is **generated from `(X, y)`** via the proposer — this needs the
-`train` extras (dspy) and `task` + `class_definitions` set; it raises a clear error otherwise. So a
-plain `pip install nli-boost` can score with a given/loaded pool but cannot generate one.
+```bash
+pip install nli-boost           # inference only: encoder + sklearn, no dspy
+pip install "nli-boost[train]"  # + hypothesis generation/evolution (dspy), dataset loading, CLI
+```
 
-**Input / output** — `transform(X)` accepts a 1-D sequence of strings or a single text column (as
-`ColumnTransformer` hands over). Output columns per `score_mode`: `entail_contradict` → `2·len(hypotheses)`
-(`[P(entail) | P(contradict)]`), `entail` → `len(hypotheses)`, `contrast` → `len(hypotheses)`
-(`P(entail) − P(contradict)`). `get_feature_names_out()` returns the hypotheses themselves, so feature
-importances stay readable.
+Developing from source (uv installs the `train` group by default):
 
-**Construct / persist** — `from_run(dir)` (a trained run's `config.yaml` + `model.json`),
-`from_config(dict_or_yaml)`, `save(path)` / `load(path)` (JSON: hypotheses + encoder config, no weights).
-A fitted vectorizer pickles cleanly (the live encoder/cache is dropped and rebuilt on demand).
+```bash
+uv sync
+echo 'OPENROUTER_API_KEY=sk-or-...' > .env   # the hypothesis-proposer LM (training only)
+uv run pre-commit install
+```
 
-**Compose** — it's a plain transformer, so the usual sklearn machinery applies:
+## Inference: `HypothesisVectorizer`
+
+A plain scikit-learn transformer that turns a column of text into NLI-entailment features against a
+fixed hypothesis set. Its "model" is the hypothesis list + encoder name, so it needs **no LM and no
+dspy** — only the encoder.
+
+**Constructor** — `HypothesisVectorizer(hypotheses=None, *, encoder="dleemiller/finecat-nli-l",
+score_mode="entail_contradict", device="cuda", batch_size=128, max_text_chars=1200, cache_path=None,
+task=None, class_definitions=None, class_names=None, n_hypotheses=64, lm=..., dedup_corr=0.95)`.
+Standard sklearn params (stored verbatim; `get_params`/`set_params`/`clone`/`GridSearchCV` all work).
+The last six are generation knobs, used only by `fit` when `hypotheses` is None (see below).
+
+**`transform(X)`** — accepts a 1-D sequence of strings *or* a single text column (as
+`ColumnTransformer` hands over). Output columns per `score_mode`:
+
+| `score_mode` | columns | meaning |
+|---|---|---|
+| `entail_contradict` (default) | `2·len(hypotheses)` | `[P(entail) ‖ P(contradict)]` |
+| `entail` | `len(hypotheses)` | `P(entail)` |
+| `contrast` | `len(hypotheses)` | `P(entail) − P(contradict)` |
+
+`get_feature_names_out()` returns the hypotheses themselves, so feature importances stay readable.
+
+**`fit(X, y)`** — fixes the hypothesis set. If you passed `hypotheses`, they're used as-is (pure
+transformer, no LM). If not, the pool is **generated from `(X, y)`** via the proposer — which requires
+the `train` extras and `task` + `class_definitions` set (clear error otherwise). So an inference-only
+install can score with a supplied/loaded pool but cannot generate one.
+
+**Construct / persist** — `from_run(dir)` (a trained run's `config.yaml` encoder + `model.json` pool),
+`from_config(dict_or_yaml)`, and `save(path)` / `load(path)` (JSON: hypotheses + encoder config, no
+weights). A fitted vectorizer pickles cleanly — the live encoder/cache handle is dropped and rebuilt
+on demand.
+
+**Compose** — it's a transformer, so the usual sklearn machinery applies:
 
 ```python
-# one text column alongside other tabular features:
-ColumnTransformer([("hyp", HypothesisVectorizer(hyps), "text"), ("num", StandardScaler(), num_cols)])
+# score one text column alongside other tabular features
+ColumnTransformer([("hyp", HypothesisVectorizer(hyps), "text"),
+                   ("num", StandardScaler(), ["price", "age"])])
 
-# optional TF-IDF channel — plain sklearn, not baked in:
+# optional TF-IDF channel — plain sklearn, not baked in
 FeatureUnion([("nli", HypothesisVectorizer(hyps)),
               ("tfidf", make_pipeline(TfidfVectorizer(), TruncatedSVD(128)))])
 ```
 
-Artifacts per run in `runs/<run_name>/`: the pool itself (`model.json` — the model is a list of
-English sentences), the evolution audit trail (`log.jsonl`: every prune with its reason, every
-refill with its target-AUC), `metrics.json` (the single honest headline), and `costs.json`.
-All NLI scores are cached in `cache/nli_scores.sqlite`; reruns and post-hoc analyses are ~free.
+`cache_path` points at a sqlite score cache (raw logits keyed by text+hypothesis+model); a shared path
+makes repeat scoring across runs ~free. `None` uses an in-process cache for the instance's lifetime.
+
+## Training: producing a pool
+
+Needs the `train` extras. Either drive it from a YAML config with the CLI, or let the vectorizer's
+`fit` generate a static pool.
+
+```bash
+uv run nli-boost run configs/trec.yaml     # generate -> evolve -> CV head -> one test eval
+uv run nli-boost report                    # pool_cv results across runs/
+uv run nli-boost compare runs/a runs/b     # paired McNemar: is a delta real or noise?
+```
+
+The full pipeline (`nli-boost run`) is:
+
+1. **Generate** — the LLM proposes hypotheses from the task + class definitions + sampled examples.
+2. **Dedup (covariance)** — reject a candidate whose entail-score vector correlates > `dedup_corr`
+   with a kept one (removes *behavioral* duplicates, not just paraphrases).
+3. **Evolve** — rank hypotheses by CV-fold permutation importance + cross-fold stability, prune
+   confident deaths, refill against confusion hot-spots, repeat to a held-out plateau. With a TF-IDF
+   channel configured, ranking is *marginal over TF-IDF*, so hypotheses whose signal the (free)
+   lexical channel already carries are dropped — shrinking the per-prediction NLI pool.
+4. **Head** — a CV-selected classical head over the entail+contradict (+ optional TF-IDF) features;
+   one held-out test evaluation (`pool_cv`) is the only reported number.
+
+`HypothesisVectorizer(task=..., class_definitions=[...]).fit(X, y)` runs steps 1–2 (a static pool) for
+quick sklearn-native use; the CLI's evolution (step 3) yields the stronger pools.
+
+Artifacts per run in `runs/<run_name>/`: `model.json` (the pool — the model is a list of English
+sentences — plus head params), `log.jsonl` (evolution audit trail: every prune with its reason),
+`metrics.json` (the single honest headline), `costs.json` (LM spend, encoder pairs, wall time).
+
+## What's measured
+
+Full audit and per-decision measurements are in `NOTES.md`. Headlines on TREC-6 (2k train, seed 7,
+honest `pool_cv` protocol):
+
+- **The encoder is the one reliable accuracy lever** — `-m → -l` ≈ **+5 pts** (p=0.024). Instruction
+  wording, proposer model, pool size, and tree-structured prompting all wash out within noise at `-l`.
+- **Best single pool:** **0.934** at `-m`, **0.954** at `-l`. Adding the TF-IDF channel reaches
+  **0.964** (best point estimate; not significantly above the 0.956 plain-TF-IDF run, p=0.42).
+- **Averaging independent pools (a committee) reaches 0.964 robustly** — beating any single pool
+  without having to pick the lucky one.
+- **vs baselines** (ag_news / sst2): the method **beats TF-IDF decisively** (+4 to +24 pts) but only
+  **ties zero-shot NLI** — its edge is interpretable features that beat bag-of-words, concentrated on
+  multi-class carving (TREC, ag_news); on binary sentiment a single zero-shot hypothesis suffices.
+
+The expected frontier is the **low-N** regime (2–5 examples/class), where transfer knowledge should
+matter most and a different pipeline applies — see [docs/low-n-plan.md](docs/low-n-plan.md).
 
 ## Development
 
 ```bash
-uv run pytest          # full pipeline runs under fakes — no GPU or LM key needed
+uv run pytest          # full pipeline + vectorizer under fakes — no GPU or LM key needed
 uv run ruff check .    # also enforced via pre-commit
 ```
 
-The pre-rewrite exploratory code (trees, boosting, and the experiments that selected this method)
-is archived untracked in `src-bak/`; the experiment log lives in `NOTES.md`.
+The pre-rewrite exploratory code (trees, boosting, and the experiments that selected this method) is
+archived untracked in `src-bak/`; the running experiment log lives in `NOTES.md`.
