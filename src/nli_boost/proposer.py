@@ -19,7 +19,14 @@ _RULES = (
     "Each hypothesis must be a single declarative, present-tense sentence about 'the text' "
     '(e.g. "The text describes a sporting event."). It must be verifiable from the text alone '
     "— no references to datasets, labels, or classification. Prefer affirmative phrasing over "
-    "negation. Vary specificity: some broad, some narrow."
+    "negation. Vary specificity: some broad, some narrow. Beyond describing the QUESTION (its "
+    "topic, intent, or wording), also include ANSWER-oriented hypotheses that reduce the text to "
+    'the imperative it is equivalent to (e.g. "The text is equivalent to asking someone to name a '
+    'thing." / "...to explain or define something." / "...to locate a place." / "...to give a '
+    'number.") and to the FORM of a valid answer (e.g. "The text can be answered with a short '
+    'name." vs "The text requires a full-sentence explanation."). Answer-oriented hypotheses '
+    "separate classes that share question phrasing but differ in answer type; prefer this abstract "
+    "answer-imperative framing over concrete compositional wording, which the encoder grounds poorly."
 )
 
 
