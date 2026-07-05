@@ -53,13 +53,21 @@ def test_runner_from_run_reuses_pool_without_llm(tmp_path):
     assert not p2.generate_calls and not p2.refill_calls  # zero LM usage on finalization
 
 
-def test_textual_dedup_and_norm():
+def test_dedup_exact_and_covariance():
+    import numpy as np
+    from conftest import encode
+
     assert norm_statement("The text  is Brief. ") == norm_statement("the text is brief")
-    d = Deduper.__new__(Deduper)  # no model construction
-    d._failed = True  # STS disabled -> textual behavior only
-    d.cfg = None
-    kept, rejected = d.filter(["A one.", "a one", "B two."], against=[], seen=set())
-    assert kept == ["A one.", "B two."] and rejected == ["a one"]
+    ref = encode(np.random.default_rng(0).random((60, 4)))  # 60 ref texts, 4 feature columns
+    d = Deduper(FakeScorer(), ref, corr_threshold=0.95)
+    # exact-text: "f0 x." normalizes to "f0 x" -> duplicate dropped before any scoring
+    kept, rejected = d.filter(["f0 x", "f0 x."], against=[], seen=set())
+    assert kept == ["f0 x"] and rejected == ["f0 x."]
+    # covariance: "f1 a" and "f1 b" read the SAME feature column -> collinear -> one dropped;
+    # "f2 c" is a distinct feature -> kept
+    kept2, rejected2 = d.filter(["f1 a", "f1 b", "f2 c"], against=[], seen=set())
+    assert "f1 a" in kept2 and "f2 c" in kept2 and len(kept2) == 2
+    assert any("corr" in s for s in rejected2)
 
 
 def test_dataset_specs_are_complete():

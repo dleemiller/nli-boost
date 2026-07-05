@@ -54,8 +54,11 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
     bundle = bundle or data.load(cfg.data, cfg.seed)
     scorer = scorer or EntailmentScorer(cfg.encoder, ScoreCache(cfg.cache_dir / "nli_scores.sqlite"), costs)
     proposer = proposer or Proposer(cfg.lm, costs)
-    deduper = deduper or Deduper(cfg.sts)
     rng = np.random.default_rng(cfg.seed)
+    if deduper is None:  # covariance dedup correlates candidate score vectors on a train subsample
+        sub = data.stratified_indices(bundle.y_train, min(cfg.dedup.ref_size, len(bundle.y_train)), rng)
+        ref_texts = [bundle.train_texts[i] for i in sub]
+        deduper = Deduper(scorer, ref_texts, cfg.dedup.corr_threshold)
 
     # STAGE 1 — pool: generate, or reuse a previous run's (encoder finalization)
     if cfg.pool.from_run:

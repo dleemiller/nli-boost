@@ -14,7 +14,7 @@ Every design choice below carries the measurement that forced it (from NOTES.md,
 # classes                : names + ONE-LINE DEFINITIONS   # +TREC clarity; ~free
 # encoder                : frozen NLI cross-encoder       # capacity knob: -m -> -l = +5 pts
 # proposer_lm            : cheap LM (deepseek-flash)      # ~$0.01 per full fit
-# sts                    : small STS cross-encoder        # paraphrase filter, thr 0.75
+# (dedup)                : covariance of score vectors    # drop collinear features, |corr|>0.95
 
 # score(text, hypothesis) -> P(entail), P(contradict)     # 1 forward pass, 2 features
 # every (text, hypothesis) score is cached forever — reruns/resumes are ~free
@@ -30,7 +30,7 @@ pool = proposer_lm.generate(
     rules = "single declarative sentence about 'the text'; verifiable from the
              text alone; affirmative; vary specificity",
 )
-pool = sts_dedup(textual_dedup(pool))         # paraphrases die BEFORE paying for scoring
+pool = covariance_dedup(textual_dedup(pool))   # drop collinear features (redundant score vectors)
 
 
 # ============================================================================
@@ -70,7 +70,7 @@ for round in range(6):                                          # cap; patience 
     # ---- refill ------------------------------------------------------------
     refills = proposer_lm.refill(survivors, dead_with_reasons, evidence,
                                  n=len(dead))
-    refills = sts_dedup(textual_dedup(refills))
+    refills = covariance_dedup(textual_dedup(refills))
     pool = survivors + refills
 
     # instrumentation: next round, measure each refill's STANDALONE AUC on the

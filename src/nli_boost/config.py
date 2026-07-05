@@ -23,13 +23,12 @@ class EncoderConfig(BaseModel):
     device: str = "cuda"
 
 
-class StsConfig(BaseModel):
-    """Paraphrase filter applied to candidates BEFORE they cost encoder scoring."""
+class DedupConfig(BaseModel):
+    """Feature-space (covariance) dedup: drop a candidate whose entailment score vector is
+    ~collinear with a kept one. Behavioral, not textual; no separate STS model."""
 
-    model: str = "dleemiller/ModernCE-large-sts"
-    # calibrated: paraphrases score 0.78-0.80, distinct hypotheses 0.33-0.49
-    threshold: float = 0.75
-    device: str = "cuda"
+    corr_threshold: float = 0.95  # |Pearson| above this = redundant feature (multicollinearity)
+    ref_size: int = 400  # stratified train subsample the score vectors are correlated on
 
 
 class LMConfig(BaseModel):
@@ -69,7 +68,7 @@ class RunConfig(BaseModel):
     seed: int = 7
     data: DataConfig
     encoder: EncoderConfig = EncoderConfig()
-    sts: StsConfig = StsConfig()
+    dedup: DedupConfig = DedupConfig()
     lm: LMConfig = LMConfig()
     pool: PoolConfig = PoolConfig()
     lexical: LexicalConfig = LexicalConfig()
