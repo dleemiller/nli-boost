@@ -1729,3 +1729,13 @@ shape (2000,128)=(n,2m). (b) END-TO-END — Pipeline(vec, HGB) test acc 0.9520 v
 within noise (HGB vs cv_selected_head). The shipped inference interface reproduces the method correctly
 on real cached data, not just the fake-scorer unit tests. All cache hits, no GPU. Verdict: interface
 correct; no action needed.
+
+## 2026-07-05 (hourly) — RESULT: standard sklearn workflow works + reproduces 0.964
+
+Built the model as a plain sklearn Pipeline(FeatureUnion([HypothesisVectorizer.from_run(best_l_max),
+make_pipeline(TfidfVectorizer, TruncatedSVD(128))]), HGB(lr=.12,l2=.01)). Results: clone OK; fit/score
+= **0.9640 exactly** (== best_l_max pool_cv); get_feature_names_out = 256 readable names
+(nli__entail:... + tfidf__truncatedsvd*); cross_val_score(cv=3) clones per fold fine. NO sklearn-
+convention issues found — nothing needed rework; the vectorizer composes idiomatically (Pipeline /
+FeatureUnion / ColumnTransformer / clone / GridSearchCV-ready / feature names). Locked in as
+tests/test_sklearn_workflow.py (skips unless the run + score cache are present; cached -l, no GPU).
