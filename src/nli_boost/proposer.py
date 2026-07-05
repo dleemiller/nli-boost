@@ -38,21 +38,38 @@ class Hypothesis(BaseModel):
     rationale: str  # elicited because it improves statement quality; then discarded
 
 
+class SplitNode(BaseModel):
+    """One node of an imagined decision tree over the classes. depth 0 = root (coarsest split);
+    `separates` names what this node distinguishes; `hypotheses` implement that split."""
+
+    depth: int
+    separates: str  # e.g. "named-entity classes vs the rest" (root) or "person vs place" (leaf)
+    hypotheses: list[str]
+
+
 class GeneratePool(dspy.Signature):
     __doc__ = (
         "Write hypotheses for a natural-language-inference model that will check, for each input "
         "text, whether the text entails each hypothesis. The entailment scores become features "
-        "for a downstream classifier, so the set should collectively separate the classes: cover "
-        "every class from multiple angles (topics, entities, style, intent) and include "
-        "contrastive hypotheses that split groups of classes. " + _RULES
+        "for a downstream classifier. Produce TWO complementary things:\n"
+        "(1) `tree` — imagine a DECISION TREE that classifies these texts and output its splits, "
+        "ROOT FIRST (depth 0). The root split's hypotheses separate the coarsest FAMILY of related "
+        "classes from the rest (GROUPING features); deeper nodes split a family into sub-groups; "
+        "leaf nodes separate two otherwise-similar classes (BOUNDARY features). Give a few "
+        "hypotheses per node and name what it `separates`. Use the class definitions to decide "
+        "which classes are similar.\n"
+        "(2) `hypotheses` — additional standalone hypotheses covering every class from multiple "
+        "angles (topic, entity, intent, style, answer-oriented), as independent features.\n"
+        "Every hypothesis from BOTH becomes a feature; keep them complementary, not redundant. " + _RULES
     )
 
     task: str = dspy.InputField(desc="the classification task")
     class_definitions: list[str] = dspy.InputField(desc="one-line definition per class")
     labeled_examples: list[str] = dspy.InputField(desc="sample texts with their true class")
-    n: int = dspy.InputField(desc="how many hypotheses to write")
+    n: int = dspy.InputField(desc="total hypotheses to write across tree + list")
     avoid: list[str] = dspy.InputField(desc="statements already written; do not repeat or paraphrase")
-    hypotheses: list[Hypothesis] = dspy.OutputField()
+    tree: list[SplitNode] = dspy.OutputField(desc="decision-tree splits, root first (grouping -> boundary)")
+    hypotheses: list[Hypothesis] = dspy.OutputField(desc="additional diverse standalone hypotheses")
 
 
 class RefillPool(dspy.Signature):
@@ -81,6 +98,20 @@ class RefillPool(dspy.Signature):
     )
     n: int = dspy.InputField(desc="how many replacement hypotheses to write")
     hypotheses: list[Hypothesis] = dspy.OutputField()
+
+
+def _flatten(result) -> list[str]:
+    """Collect statements from a decision-tree output (`tree` of SplitNodes) and/or a flat
+    `hypotheses` list — GeneratePool returns both, RefillPool only the flat list."""
+    out = []
+    for node in getattr(result, "tree", None) or []:
+        for s in node.hypotheses or []:
+            if s and s.strip():
+                out.append(s.strip())
+    for h in getattr(result, "hypotheses", None) or []:
+        if h.statement and h.statement.strip():
+            out.append(h.statement.strip())
+    return out
 
 
 def _make_lm(cfg: LMConfig, cache: bool = True, reasoning: bool = True) -> dspy.LM:
@@ -151,7 +182,7 @@ class Proposer:
             try:
                 with dspy.context(lm=lm):
                     result = predictor(**inputs)
-                return [h.statement.strip() for h in result.hypotheses if h.statement.strip()]
+                return _flatten(result)
             except Exception as e:  # LM pathologies must not kill a fit
                 print(f"    proposal failed ({type(e).__name__}), attempt {attempt + 1}/2", flush=True)
             finally:
