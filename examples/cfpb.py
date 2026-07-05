@@ -25,36 +25,50 @@ _CLOSED = {
 _CATS = ["Product", "Company", "State", "Submitted via"]
 
 
-def load_frame(limit: int):
-    """Stream the CFPB mirror, keeping closed complaints that have a narrative."""
+def load_frame(limit: int, per_class: int | None = None):
+    """Stream the CFPB mirror, keeping closed complaints that have a narrative.
+
+    `per_class` (recommended): collect up to this many of EACH relief class — monetary relief is
+    only ~8% of complaints, so a plain `limit` subset has too few positives for a stable AUC.
+    Balanced sampling makes the base rate artificial but AUC (a rank metric) stays comparable."""
     import pandas as pd
     from datasets import load_dataset
 
     ds = load_dataset("BEE-spoke-data/consumer-finance-complaints", split="train", streaming=True)
-    rows = []
+    rows, kept = [], {0: 0, 1: 0}
     for r in ds:
         narrative = (r.get("Consumer complaint narrative") or "").strip()
         resp = r.get("Company response to consumer")
-        if narrative and resp in _CLOSED:
-            rows.append(
-                {
-                    "date": r["Date received"],
-                    "narrative": narrative,
-                    "Product": r.get("Product") or "unknown",
-                    "Company": r.get("Company") or "unknown",
-                    "State": r.get("State") or "unknown",
-                    "Submitted via": r.get("Submitted via") or "unknown",
-                    "relief": int(resp == "Closed with monetary relief"),
-                }
-            )
-            if len(rows) >= limit:
+        if not (narrative and resp in _CLOSED):
+            continue
+        y = int(resp == "Closed with monetary relief")
+        if per_class is not None:
+            if kept[y] >= per_class:
+                continue
+            kept[y] += 1
+        rows.append(
+            {
+                "date": r["Date received"],
+                "narrative": narrative,
+                "Product": r.get("Product") or "unknown",
+                "Company": r.get("Company") or "unknown",
+                "State": r.get("State") or "unknown",
+                "Submitted via": r.get("Submitted via") or "unknown",
+                "relief": y,
+            }
+        )
+        if per_class is not None:
+            if kept[0] >= per_class and kept[1] >= per_class:
                 break
+        elif len(rows) >= limit:
+            break
     return pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit", type=int, default=20000, help="closed+narrative complaints to use")
+    ap.add_argument("--limit", type=int, default=20000, help="closed+narrative complaints (natural rate)")
+    ap.add_argument("--per-class", type=int, default=None, help="balanced: this many of each relief class")
     ap.add_argument("--encoder", default="dleemiller/finecat-nli-l")
     ap.add_argument("--n-hypotheses", type=int, default=64)
     ap.add_argument("--evolve", action="store_true", help="run the CV-prune/refill loop in fit")
@@ -75,7 +89,7 @@ def main():
 
     from nli_boost import HypothesisVectorizer
 
-    df = load_frame(args.limit)
+    df = load_frame(args.limit, per_class=args.per_class)
     cut = int(0.8 * len(df))  # temporal split: oldest 80% train, newest 20% test
     tr, te = df.iloc[:cut].copy(), df.iloc[cut:].copy()
     top = set(tr["Company"].value_counts().head(200).index)  # rare companies -> "other"

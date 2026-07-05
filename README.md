@@ -24,6 +24,20 @@ clf = Pipeline([("hyp", vec), ("clf", HistGradientBoostingClassifier())]).fit(te
 clf.predict(new_texts)
 ```
 
+## Features
+
+- **Interpretable** — the model *is* a list of English hypotheses; `get_feature_names_out()` returns
+  them, so feature importances read as plain sentences. No fine-tuning, no black box.
+- **Configurable with your own hypotheses** — `fixed_hypotheses` are always kept (scored and fit with
+  the generated pool, never pruned), so you can hard-wire domain knowledge and let the LM fill in.
+- **Combinable with tabular features** — a standard scikit-learn transformer: score one text column
+  alongside numeric/categorical columns in a `ColumnTransformer`, and pass any feature block as the
+  evolution `baseline_features` so hypotheses are pruned by *marginal* value over it.
+- **Scales from full data to low/zero-N** — full supervised, few-shot (`shots_per_class` + text-space
+  `sts` dedup, no evolution), and a planned LLM **pseudo-labeling** path that labels unlabelled data
+  to unlock evolution and de-overfit the head ([docs/pseudolabel-plan.md](docs/pseudolabel-plan.md)).
+- **Cheap, fast inference** — frozen encoder, no LM and no `dspy` at inference; scores are cached.
+
 ## Install
 
 ```bash
