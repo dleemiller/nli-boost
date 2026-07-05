@@ -1246,3 +1246,18 @@ two split axes) — same zero-cost trick applied to the adaptive methods.
   (ag_news, trec) → `-m` baselines for apples-to-apples tables. Expected ~10-15 min/run under
   contention.
 - No new completed runs to audit this cycle (the killed run produced no artifacts).
+
+### 2026-07-04 — learnings from two papers (EDEntail; synthetic-NLI 2402.12368)
+
+Both reinforce our measured verdict: the NLI encoder's coverage/generalization is the ceiling, not
+label-side cleverness (instructions/proposer are saturated — GEPA null). Prioritized takeaways:
+1. [HIGH, 2402.12368] Better-generalizing FROZEN encoder for OOD + LONG premises — exactly our
+   setting (OOD LM-hypotheses) and open weakness (20ng long docs; we truncate at 1200 chars). The
+   encoder is the only measured lever (+5pts). Action: A/B a domain/length-robust NLI model on 20ng.
+2. [CHEAP, EDEntail] Extensional/DISJUNCTIVE hypotheses for internally-diverse classes ("asks for a
+   count, a date, or a percentage") — one high-recall feature; addresses the class-internal-diversity
+   problem. Caveat: cuts against the tuned reward's single-claim/non-vacuous pressure -> a deliberate type.
+3. [CHECK] max_text_chars=1200 is a silent length cap; 2402.12368 makes length first-class. Probe on 20ng.
+4. [LOW, EDEntail] hypothesis-format ensembling — marginal (we already have many-hypothesis diversity).
+
+In flight: trec_pro_tuned_l (missing grid cell) + trec_cov_l (from-scratch with covariance deduper).
