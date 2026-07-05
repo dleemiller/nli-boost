@@ -1275,3 +1275,13 @@ Gap is small only because -l semantic paraphrases recover most of it.
 LESSON: "surface" != "hack". semantic_not_surface over-penalizes task-legitimate lexical cues; a
 better reward penalizes surface features only when they DON'T generalize (cv_skill already catches
 that). Remedy queued: trec_tuned_l_lex (tuned + TF-IDF channel) — if it recovers ~0.952, diagnosis confirmed.
+
+### 2026-07-04 — 2x2 proposer x instruction grid complete (all within noise at -l)
+
+TREC pool_cv at -l (metrics.json):        hand-written | tuned
+                                   flash:     0.952     | 0.946
+                                   pro:       0.946     | 0.952
+All four within the ~0.5-1pt noise floor (McNemar p>0.2 across cells). Neither proposer model nor
+instruction tuning is a lever at -l. Lexical suppression (13->1 wh-word hyps in tuned pools) is real
+in COMPOSITION but costs ~0 ACCURACY at -l (encoder absorbs it via semantic paraphrases; would more
+likely bite at -m, untested). trec_cov_l (covariance deduper, from scratch) running next.
