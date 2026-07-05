@@ -37,6 +37,10 @@ class DedupConfig(BaseModel):
     # ("corr_threshold" accepted for configs saved by older runs.)
     threshold: float = Field(0.95, validation_alias=AliasChoices("threshold", "corr_threshold"))
     ref_size: int = 400  # covariance only: stratified train subsample the vectors are correlated on
+    # covariance only: reject candidates whose entail std on the ref texts is below this — a
+    # ~constant feature is dead weight however it is worded. Conservative: even a detector for a
+    # 1.6%-prevalence class measures ~0.10 (NOTES 2026-07-05).
+    min_std: float = 0.02
     model: str = "sentence-transformers/all-MiniLM-L6-v2"  # sts only: the sentence encoder
 
 

@@ -23,7 +23,8 @@ def norm_statement(s: str) -> str:
 
 def _zscore(col: np.ndarray) -> np.ndarray:
     """Standardize a column so a dot product / n is the Pearson correlation. A ~constant
-    column becomes zeros -> correlation 0 with everything (vacuity is handled elsewhere)."""
+    column becomes zeros -> correlation 0 with everything (vacuity is caught by the
+    min_std floor in Deduper.filter, BEFORE the correlation pass)."""
     c = col - col.mean()
     s = c.std()
     return c / s if s > 1e-9 else np.zeros_like(c)
@@ -44,10 +45,15 @@ def _exact_text_pass(candidates: list[str], seen: set[str]) -> tuple[list[str], 
 
 
 class Deduper:
-    def __init__(self, scorer, ref_texts: list[str], corr_threshold: float = 0.95):
+    def __init__(self, scorer, ref_texts: list[str], corr_threshold: float = 0.95, min_std: float = 0.02):
         self.scorer = scorer
         self.ref_texts = ref_texts
         self.thr = corr_threshold
+        # variance floor: a candidate whose entailment is ~constant on the ref texts is a dead
+        # feature (measured: always-false over-specific statements, entail mean ~0.002). It would
+        # zscore to zeros and pass the correlation check unchallenged. 0.02 is conservative — a
+        # detector for even a 1.6%-prevalence class measures std ~0.10 (see NOTES 2026-07-05).
+        self.min_std = min_std
 
     def _entail(self, hyps: list[str]) -> np.ndarray:
         """(n_ref, len(hyps)) entailment score vectors — the features to correlate."""
@@ -71,6 +77,10 @@ class Deduper:
         n = max(1, len(self.ref_texts))
         kept = []
         for c, raw in zip(uniq, cand):
+            spread = float(raw.std())
+            if spread < self.min_std:  # flat = vacuous feature, junk regardless of wording
+                rejected.append(f"{c} (flat: entail std {spread:.3f} on ref texts)")
+                continue
             v = _zscore(raw)
             corr = max((abs(float(v @ k) / n) for k in cols), default=0.0)  # max |Pearson| vs kept
             if corr > self.thr:

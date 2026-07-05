@@ -102,3 +102,17 @@ def test_dataset_specs_are_complete():
             assert len(spec["classes"]) == len(spec["descriptions"])
             for c, d in zip(spec["classes"], spec["descriptions"]):
                 assert d.startswith(f"{c}:")
+
+
+def test_dedup_variance_floor_rejects_flat_candidates():
+    import numpy as np
+    from conftest import encode
+
+    vals = np.random.default_rng(0).random((60, 4))
+    vals[:, 3] = 0.01  # a feature that never fires -> vacuous however it is worded
+    d = Deduper(FakeScorer(), encode(vals), corr_threshold=0.95)
+    kept, rejected = d.filter(["f3 over-specific dead statement", "f2 varies"], against=[], seen=set())
+    assert kept == ["f2 varies"]
+    assert any("flat" in r for r in rejected)
+    # the floor runs BEFORE the correlation pass: flat candidates never enter `seen`
+    assert "f3 over-specific dead statement" not in {norm_statement(k) for k in kept}

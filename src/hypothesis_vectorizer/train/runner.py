@@ -62,7 +62,9 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
             deduper = STSDeduper(model=cfg.dedup.model, threshold=cfg.dedup.threshold)
         else:  # covariance: correlate candidate score vectors on a train subsample
             sub = data.stratified_indices(bundle.y_train, min(cfg.dedup.ref_size, len(bundle.y_train)), rng)
-            deduper = Deduper(scorer, [bundle.train_texts[i] for i in sub], cfg.dedup.threshold)
+            deduper = Deduper(
+                scorer, [bundle.train_texts[i] for i in sub], cfg.dedup.threshold, cfg.dedup.min_std
+            )
 
     # STAGE 1 — pool: generate, or reuse a previous run's (encoder finalization)
     if cfg.pool.from_run:

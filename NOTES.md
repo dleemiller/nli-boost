@@ -1919,3 +1919,21 @@ All 40 tests pass, ruff clean. No GPU touched (index build/vacuum were disk-only
    pin (.python-version, now tracked); floor stays >=3.11; classifiers list 3.11-3.14. 3.14 CUDA
    path untested — staying one step back. NOTE (resource-change flag): future GPU runs now execute on
    py3.13 + same torch — flagging per protocol; revert = echo 3.11 > .python-version && uv sync.
+
+## 2026-07-05 — generation-time variance check (backlog item): measured, REFRAMED, filter implemented
+MEASURED on cached pools (entail-prob std across each run's own train texts):
+- The premise ("drop always-TRUE statements") is stale — no always-true hyps survive in final pools
+  (evolution's zero-fold prune kills them). The real waste is always-FALSE over-specific hypotheses:
+  trec_full: "equivalent to 'What is the abbreviation of X?'" std 0.013 mean 0.002;
+  ag_news: sanctions/climate/espionage/ESG hyps std 0.022-0.039 mean ~0.001-0.003 (fire on nothing).
+- Baseline for real signal: a detector for TREC's rarest class (ABBR, 1.6%) still has std ~0.10;
+  even a 0.5%-class detector ~0.04. So std < 0.02 is unambiguous junk.
+- CODE GAP found: dedup._zscore comments "vacuity is handled elsewhere" — it is handled NOWHERE.
+  Flat candidates zscore to zeros -> corr 0 with everything -> always KEPT.
+PRE-REGISTERED EXPECTATION: adding a min_std floor (default 0.02, conservative) to the covariance
+Deduper rejects truly-dead candidates at generation with ZERO risk to rare-class detectors (5x
+margin to ABBR's 0.10). Would have pruned 1/62 of trec_full's final pool; the ag_news junk
+(std 0.022-0.039) sits ABOVE the conservative default — testing a stricter 0.05 floor is a GPU-window
+experiment (expectation there: pool_cv holds or improves as slots reallocate; if it drops, rare
+detectors matter more than measured and we revert). No accuracy claim made for the default floor;
+it is a generation-efficiency fix (fewer wasted slots + LM refills), validated fully at next GPU run.
