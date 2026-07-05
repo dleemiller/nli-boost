@@ -1833,3 +1833,16 @@ latency. Then ~128k-pair train+test scoring at -l ahead. EXPECTATION: this is a 
 datapoint (balanced/random split), NOT the temporal-natural-rate benchmark (AUC 0.78 hybrid / 0.69
 tfidf) — so not directly comparable; want AUC comfortably >0.5 and beating a tfidf+tabular baseline to
 show the narrative hypotheses add signal. Verdict on completion. No new job launched (run in flight).
+
+## 2026-07-05 — CFPB run killed (user request; GPU reserved for training)
+CFPB balanced run (--per-class 1000) killed at user request — Lee's futo-asr training holds the GPU
+and takes priority. Not a failure: diagnosed a real perf bug first. Worker was pegged 100% on ONE CPU
+core with the WAL frozen = stuck in sqlite cache LOOKUPS, not GPU scoring. Cause: score cache is now
+2.9 GB and `get_logits` filters `WHERE hyp_hash=? AND model=? AND text_hash IN(...)` while the PK
+leads with text_hash -> no index hit on a large DB. Compounded by CFPB's long narratives (~300 tok vs
+TREC ~15). FIX (CPU/disk-only, safe anytime): add covering index (hyp_hash, model, text_hash) in
+cache.py; drop max_text_chars to ~512 for CFPB. Deferred until GPU frees / Lee's go-ahead.
+
+CRON NOTE: the 15-min review cron is STALE — references removed configs (sst2_boost, ag_news_boost,
+trec_boost, 20newsgroups_tree) and a removed `audit` subcommand + tree/boost methods. Superseded by
+the sklearn HypothesisVectorizer direction. Recommend deleting it.
