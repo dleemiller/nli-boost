@@ -90,14 +90,24 @@ def main():
     from nli_boost import HypothesisVectorizer
 
     df = load_frame(args.limit, per_class=args.per_class)
-    cut = int(0.8 * len(df))  # temporal split: oldest 80% train, newest 20% test
-    tr, te = df.iloc[:cut].copy(), df.iloc[cut:].copy()
+    if args.per_class is not None:
+        # balanced subset -> random STRATIFIED split (a temporal split would shift the class
+        # balance: rare positives are older, so they'd pile into train and starve the test set)
+        from sklearn.model_selection import train_test_split
+
+        tr, te = train_test_split(df, test_size=0.2, random_state=7, stratify=df["relief"])
+        tr, te = tr.copy(), te.copy()
+        split = "random stratified (balanced subset)"
+    else:
+        cut = int(0.8 * len(df))  # natural-rate: temporal split (older train, newer test)
+        tr, te = df.iloc[:cut].copy(), df.iloc[cut:].copy()
+        split = "temporal (natural rate)"
     top = set(tr["Company"].value_counts().head(200).index)  # rare companies -> "other"
     for d in (tr, te):
         d["Company"] = d["Company"].where(d["Company"].isin(top), "other")
     print(
-        f"{len(tr)} train / {len(te)} test | train relief rate {tr['relief'].mean():.3f}, "
-        f"test {te['relief'].mean():.3f}"
+        f"{len(tr)} train / {len(te)} test | split: {split} | "
+        f"train relief {tr['relief'].mean():.3f}, test {te['relief'].mean():.3f}"
     )
 
     # tabular block (dense one-hot), fit on train — the head sees it AND it prunes the hypotheses
