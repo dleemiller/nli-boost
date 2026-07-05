@@ -4,6 +4,7 @@ Artifacts per run in runs/<run_name>/:
   config.yaml   resolved config snapshot
   model.json    the pool (the model IS a list of English sentences) + head params
   log.jsonl     evolution audit trail: every prune with reason, refill with target-AUC
+  checkpoints.jsonl  each round's scored pool + held-out acc; the shipped pool is chosen from these
   metrics.json  pool_cv on test — the ONLY reported head (honest protocol)
   costs.json    LM spend, encoder pairs, abnormal finishes, wall time
 
@@ -65,6 +66,7 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
         pool = json.loads((cfg.runs_dir / cfg.pool.from_run / "model.json").read_text())["hypotheses"]
         _phase(f"reusing pool of {len(pool)} from {cfg.pool.from_run}")
         history: list[dict] = []
+        checkpoints: list = []
     else:
         _phase(f"generating pool of {cfg.pool.size}")
         pool = _generate_pool(bundle, proposer, deduper, cfg.pool.size, rng)
@@ -78,7 +80,7 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
             feat = LexicalFeaturizer(cfg.lexical, cfg.seed).fit(bundle.train_texts)
             lex_train = feat.transform(bundle.train_texts)
         _phase(f"evolving (cap {cfg.pool.rounds} rounds, patience {cfg.pool.patience})")
-        pool, history = evolve(
+        pool, history, checkpoints = evolve(
             bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, lex_train=lex_train
         )
 
@@ -118,6 +120,10 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
     with open(out_dir / "log.jsonl", "w") as f:
         for e in history:
             f.write(json.dumps(e) + "\n")
+    if checkpoints:  # every round's scored pool, so any is recoverable and the choice is auditable
+        with open(out_dir / "checkpoints.jsonl", "w") as f:
+            for c in checkpoints:
+                f.write(json.dumps(c.to_dict()) + "\n")
     (out_dir / "costs.json").write_text(json.dumps(costs.to_dict(), indent=2))
     return results
 

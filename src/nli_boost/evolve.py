@@ -44,6 +44,41 @@ class Ranking:
     _n: int = 0
 
 
+@dataclass
+class Checkpoint:
+    """A snapshot of the pool as it ENTERED a round, with the held-out accuracy it achieved.
+    Evolution can dip after its peak (and the final round's survivors+refills are never scored),
+    so the pool we ship is CHOSEN from these checkpoints, not taken as the last round's output.
+    Persisted to runs/<name>/checkpoints.jsonl so any round is recoverable and the choice is
+    auditable."""
+
+    round: int
+    heldout_acc: float
+    pool: list[str]
+
+    @property
+    def n_hyps(self) -> int:
+        return len(self.pool)
+
+    def to_dict(self) -> dict:
+        return {
+            "round": self.round,
+            "heldout_acc": round(self.heldout_acc, 4),
+            "n_hyps": self.n_hyps,
+            "pool": self.pool,
+        }
+
+
+def select_checkpoint(checkpoints: list[Checkpoint], noise: float = 0.003) -> Checkpoint:
+    """Choose the pool to ship: highest held-out accuracy, breaking ties within `noise` toward
+    the SMALLER pool (fewer cross-encoder forward passes at inference), then the earlier round.
+    `noise` should exceed round-to-round held-out jitter (~0.003 from HGB thread nondeterminism)
+    so we neither ship a post-peak dip nor chase a +1e-4 gain into a larger, costlier pool."""
+    best = max(c.heldout_acc for c in checkpoints)
+    contenders = [c for c in checkpoints if c.heldout_acc >= best - noise]
+    return min(contenders, key=lambda c: (c.n_hyps, c.round))
+
+
 def rank_hypotheses(
     x: np.ndarray, y: np.ndarray, m: int, seed: int, folds: int = 4, lex: np.ndarray | None = None
 ) -> Ranking:
@@ -202,7 +237,9 @@ def evolve(
     seed: int,
     lex_train: np.ndarray | None = None,
 ) -> tuple[list[str], list[dict]]:
-    """Returns (final pool, per-round history). History is the audit trail:
+    """Returns (best-held-out pool, per-round history). We return the pool with the highest
+    held-out accuracy seen across rounds — NOT the last one: evolution can dip after its peak,
+    and the final round's survivors+refills are never even scored. History is the audit trail:
     every prune with its reason, every refill with its later target-AUC.
 
     `lex_train` (n_train, d), if given, is the lexical channel over ALL train texts; the
@@ -221,6 +258,7 @@ def evolve(
 
     seen = {s.casefold() for s in pool}
     history: list[dict] = []
+    checkpoints: list[Checkpoint] = []
     best_acc, since_best = -1.0, 0
     prev_refills: list[str] = []
     prev_target: tuple[int, int] | None = None
@@ -263,6 +301,7 @@ def evolve(
             refills, _ = deduper.filter(proposed, against=survivors, seen=seen)
 
         acc = ranking.heldout_accuracy
+        checkpoints.append(Checkpoint(round=round_i, heldout_acc=acc, pool=list(pool)))
         history.append(
             {
                 "round": round_i,
@@ -278,15 +317,26 @@ def evolve(
             flush=True,
         )
 
-        pool = survivors + refills
-        prev_refills = refills
-        prev_target = tuple(groups[0][:2]) if groups else None
-
         if acc > best_acc + 1e-4:
             best_acc, since_best = acc, 0
         else:
             since_best += 1
-            if since_best >= cfg.patience:
-                print(f"--- evolve stop: no held-out improvement for {cfg.patience} rounds", flush=True)
-                break
-    return pool, history
+
+        pool = survivors + refills
+        prev_refills = refills
+        prev_target = tuple(groups[0][:2]) if groups else None
+
+        if since_best >= cfg.patience:
+            print(f"--- evolve stop: no held-out improvement for {cfg.patience} rounds", flush=True)
+            break
+
+    if not checkpoints:  # cfg.rounds == 0
+        return pool, history, checkpoints
+    chosen = select_checkpoint(checkpoints)
+    if chosen.round != round_i:
+        print(
+            f"--- evolve: shipping checkpoint from round {chosen.round} "
+            f"(heldout {chosen.heldout_acc:.4f}, {chosen.n_hyps} hyps), not the last round",
+            flush=True,
+        )
+    return chosen.pool, history, checkpoints
