@@ -1937,3 +1937,27 @@ margin to ABBR's 0.10). Would have pruned 1/62 of trec_full's final pool; the ag
 experiment (expectation there: pool_cv holds or improves as slots reallocate; if it drops, rare
 detectors matter more than measured and we revert). No accuracy claim made for the default floor;
 it is a generation-efficiency fix (fewer wasted slots + LM refills), validated fully at next GPU run.
+
+## 2026-07-05 — STATE OF PROJECT: CPU-only backlog exhausted; improvement cron standing down
+All work that can happen WITHOUT the GPU is done. Lee's futo-asr training holds the GPU (untouchable),
+so the hourly improvement cron has no productive move and is now firing no-ops. It should stand down
+(be deleted/paused) until the GPU frees; same for the stale 15-min review cron.
+
+Shipped this session (all CPU-only, GPU untouched): repo rename -> hypothesis-vectorizer; train/
+subpackage split + dspy-free isolation guard test; corrected the bogus CFPB "sqlite stall" diagnosis
+(index built/benchmarked/dropped, DB vacuumed 4.7G->2.5G; real cause = silent scoring, now verbose);
+packaging metadata + v0.4.0; py3.13 pin (tests green on 3.13 & 3.14); length-sorted GPU batching;
+dedup min_std variance floor. Cross-dataset judging CLOSED. Plateau-epsilon cached analysis done.
+
+READY-TO-FIRE GPU QUEUE (each has a pre-registered expectation above; run when GPU frees):
+1. length-sort validation: time one -l scoring pass on a mixed-length corpus (CFPB) vs the pre-commit
+   baseline. Expect ~1.3-2x; no accuracy change (result keyed per pair).
+2. CFPB re-run: examples/cfpb.py --per-class 1000 (now verbose=True, max-text-chars 512). Expect AUC
+   comfortably >0.5 on the balanced/random split, ideally > tfidf+tabular. NOT the 0.78 temporal bench.
+3. plateau (eps, patience) tune: make PoolConfig.plateau_epsilon configurable (default 1e-4, no-op),
+   then trec run at (eps=0.003, patience=4) vs (1e-4, 4); compare rounds-to-stop AND pool_cv. Commit
+   only if pool_cv holds and rounds drop. (Code change + validation in ONE GPU session — don't split.)
+4. min_std=0.05 experiment: regenerate a pool at the stricter floor; expect pool_cv holds/improves as
+   slots reallocate off the ag_news dead detectors (std 0.022-0.039); revert if it drops.
+5. Lower-priority: -l finalization of best pools; multi-pool 3-seed ensemble (error bars); 20newsgroups
+   (pool 96); two-encoder (-m + -l) union for the scaling-law story.
