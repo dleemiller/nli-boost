@@ -1261,3 +1261,17 @@ label-side cleverness (instructions/proposer are saturated — GEPA null). Prior
 4. [LOW, EDEntail] hypothesis-format ensembling — marginal (we already have many-hypothesis diversity).
 
 In flight: trec_pro_tuned_l (missing grid cell) + trec_cov_l (from-scratch with covariance deduper).
+
+### 2026-07-04 — CONFIRMED: tuned instruction suppresses task-legitimate lexical features
+
+Direct pool comparison (same flash proposer + -l, only instruction differs):
+- trec_baseline_l (hand-written): 13/60 lexical-wh-word hypotheses ("begins with 'Who'", "contains
+  'stands for'", "How many/How much", "the name of", ...).
+- trec_tuned_l (tuned): 1/49.
+The GEPA reward's semantic_not_surface judge criterion + length/vacuity hack penalty trained the
+instruction to avoid surface features (13->1). But on TREC wh-word cues are LEGITIMATE question-type
+signal, not hacks -> tuned sits below hand-written (test 0.946 vs 0.952; evolve ~0.878 vs ~0.895).
+Gap is small only because -l semantic paraphrases recover most of it.
+LESSON: "surface" != "hack". semantic_not_surface over-penalizes task-legitimate lexical cues; a
+better reward penalizes surface features only when they DON'T generalize (cv_skill already catches
+that). Remedy queued: trec_tuned_l_lex (tuned + TF-IDF channel) — if it recovers ~0.952, diagnosis confirmed.
