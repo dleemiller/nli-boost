@@ -55,10 +55,14 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
     scorer = scorer or EntailmentScorer(cfg.encoder, ScoreCache(cfg.cache_dir / "nli_scores.sqlite"), costs)
     proposer = proposer or Proposer(cfg.lm, costs)
     rng = np.random.default_rng(cfg.seed)
-    if deduper is None:  # covariance dedup correlates candidate score vectors on a train subsample
-        sub = data.stratified_indices(bundle.y_train, min(cfg.dedup.ref_size, len(bundle.y_train)), rng)
-        ref_texts = [bundle.train_texts[i] for i in sub]
-        deduper = Deduper(scorer, ref_texts, cfg.dedup.corr_threshold)
+    if deduper is None:
+        if cfg.dedup.kind == "sts":  # text-space, data-free (the low-data choice)
+            from .dedup import STSDeduper
+
+            deduper = STSDeduper(model=cfg.dedup.model, threshold=cfg.dedup.threshold)
+        else:  # covariance: correlate candidate score vectors on a train subsample
+            sub = data.stratified_indices(bundle.y_train, min(cfg.dedup.ref_size, len(bundle.y_train)), rng)
+            deduper = Deduper(scorer, [bundle.train_texts[i] for i in sub], cfg.dedup.threshold)
 
     # STAGE 1 — pool: generate, or reuse a previous run's (encoder finalization)
     if cfg.pool.from_run:
@@ -66,26 +70,31 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
         _phase(f"reusing pool of {len(pool)} from {cfg.pool.from_run}")
         history: list[dict] = []
     else:
-        _phase(f"generating pool of {cfg.pool.size}")
+        fixed = list(cfg.pool.fixed_hypotheses)
+        _phase(f"generating pool of {cfg.pool.size}" + (f" (+{len(fixed)} fixed)" if fixed else ""))
         examples = data.labeled_examples(
             bundle.train_texts, bundle.y_train, bundle.class_names, per_class=3, rng=rng
         )
         pool = generate_pool(
-            proposer, deduper, bundle.task, bundle.class_descriptions, examples, cfg.pool.size
+            proposer, deduper, bundle.task, bundle.class_descriptions, examples, cfg.pool.size, fixed=fixed
         )
-        # STAGE 2 — evolve. If a lexical channel is configured, fit it on train and pass it as a
-        # fixed baseline so NLI hypotheses are pruned by MARGINAL value over the cheap TF-IDF
-        # features — redundant-with-lexical hypotheses die, shrinking the per-inference NLI pool.
-        lex_train = None
+        # STAGE 2 — evolve. FIXED baseline blocks (never pruned; generated hypotheses must add
+        # marginal value over them): the optional TF-IDF channel, and the user's fixed hypotheses'
+        # own entail/contradict features.
+        blocks = []
         if cfg.lexical.kind != "none":
             from .lexical import LexicalFeaturizer
 
             feat = LexicalFeaturizer(cfg.lexical, cfg.seed).fit(bundle.train_texts)
-            lex_train = feat.transform(bundle.train_texts)
+            blocks.append(feat.transform(bundle.train_texts))
+        if fixed:
+            blocks.append(scorer.features(bundle.train_texts, fixed))
+        baseline = np.concatenate(blocks, axis=1) if blocks else None
         _phase(f"evolving (cap {cfg.pool.rounds} rounds, patience {cfg.pool.patience})")
         pool, history = evolve(
-            bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, baseline_train=lex_train
+            bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, baseline_train=baseline
         )
+        pool = fixed + pool  # fixed hypotheses are part of the model, ahead of the evolved ones
 
     # STAGE 3 — CV-selected head on the full train split; the optional lexical
     # channel (fit on TRAIN ONLY) is concatenated here and only here

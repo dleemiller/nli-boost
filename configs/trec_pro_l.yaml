@@ -1,6 +1,0 @@
-# maxed configuration: pro proposer / large STS (default) / large encoder
-run_name: trec_pro_l
-seed: 7
-data: {name: trec}
-encoder: {model: dleemiller/finecat-nli-l}
-lm: {model: openrouter/deepseek/deepseek-v4-pro, extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}

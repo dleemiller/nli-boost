@@ -61,6 +61,7 @@ HypothesisVectorizer(
 | parameter | type / default | description |
 |---|---|---|
 | `hypotheses` | list[str], default None | The feature vocabulary. If given, `fit` uses it as-is (no LM anywhere). If None, `fit(X, y)` generates it (needs the `train` extra + `task`/`class_definitions`). |
+| `fixed_hypotheses` | list[str], default None | **Your hand-written hypotheses, always kept.** Scored and fit alongside the rest, but never pruned — during generation/evolution they act as a fixed baseline (like the TF-IDF block), so generated hypotheses must add marginal value over them. Prepended to `hypotheses_`. |
 | `encoder` | str, `"dleemiller/finecat-nli-l"` | HF cross-encoder id (labels: entail=0, neutral=1, contradict=2). The method's capacity knob (`-m`→`-l` ≈ +5 pts). |
 | `score_mode` | `{"entail_contradict", "entail", "contrast"}` | Columns per hypothesis: both probabilities (2), P(entail) only (1), or P(entail)−P(contradict) (1). |
 | `device` | str, `"cuda"` | Encoder (and sts-dedup) device. |
@@ -130,6 +131,18 @@ vec = HypothesisVectorizer(task=..., class_definitions=...,
 
 (See [docs/low-n-plan.md](docs/low-n-plan.md) for the fuller low-N methodology.)
 
+**Your own hypotheses, protected.** Domain knowledge you already trust goes in `fixed_hypotheses` —
+always in the model, never pruned; the LM fills in *around* them (told to avoid duplicating them,
+and evolution only keeps generated hypotheses that add marginal value over them):
+
+```python
+vec = HypothesisVectorizer(
+    fixed_hypotheses=["The text asks what an abbreviation stands for.",
+                      "The text can be answered with a number."],
+    task=..., class_definitions=..., evolve=True,
+)
+```
+
 ## Training: producing a pool
 
 Needs the `train` extra (`pip install "nli-boost[train]"`). Either drive it from a YAML config with the CLI, or let the vectorizer's
@@ -140,6 +153,11 @@ uv run nli-boost run configs/trec.yaml     # generate -> evolve -> CV head -> on
 uv run nli-boost report                    # pool_cv results across runs/
 uv run nli-boost compare runs/a runs/b     # paired McNemar: is a delta real or noise?
 ```
+
+[`configs/example.yaml`](configs/example.yaml) documents every config knob (encoder / proposer-LM /
+sts-dedup models, dedup backend + threshold, pool size/rounds, `fixed_hypotheses`, lexical channel);
+the other configs are the maintained recipes (`trec`, `trec_best_l`, `trec_best_l_max` = the 0.964
+recipe, `trec_finalize_l` = re-score a fitted pool with a bigger encoder, `ag_news`, `sst2`).
 
 The full pipeline (`nli-boost run`) is:
 

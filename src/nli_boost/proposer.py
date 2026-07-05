@@ -215,15 +215,23 @@ class Proposer:
                 print(f"    lm finish_reason={finish!r} provider={provider or 'unknown'}", flush=True)
 
 
-def generate_pool(proposer, deduper, task, class_definitions, examples, size: int) -> list[str]:
-    """Generate a deduped pool of up to `size` hypotheses: a few generate passes, keeping only
-    novel (deduped) statements. Shared by the training runner and HypothesisVectorizer.fit."""
+def generate_pool(
+    proposer, deduper, task, class_definitions, examples, size: int, fixed: list[str] = ()
+) -> list[str]:
+    """Generate a deduped pool of up to `size` NEW hypotheses (excluding `fixed`): a few generate
+    passes, keeping only novel (deduped) statements. `fixed` are user-written hypotheses already in
+    the model — the LM is told to avoid them and candidates are deduped against them, but they do
+    not count toward `size`. Shared by the training runner and HypothesisVectorizer.fit."""
+    from .dedup import norm_statement
+
     pool: list[str] = []
-    seen: set[str] = set()
+    seen: set[str] = {norm_statement(f) for f in fixed}
     for _ in range(5):  # a few attempts in case the LM under-delivers or dedup trims
         if len(pool) >= size:
             break
-        proposed = proposer.generate(task, class_definitions, examples, n=size - len(pool), avoid=pool)
-        kept, _ = deduper.filter(proposed, against=pool, seen=seen)
+        proposed = proposer.generate(
+            task, class_definitions, examples, n=size - len(pool), avoid=list(fixed) + pool
+        )
+        kept, _ = deduper.filter(proposed, against=list(fixed) + pool, seen=seen)
         pool += kept
     return pool[:size]

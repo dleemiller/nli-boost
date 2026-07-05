@@ -1,4 +1,0 @@
-run_name: sst2_s17
-seed: 17
-data: {name: sst2}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}

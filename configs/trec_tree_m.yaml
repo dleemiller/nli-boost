@@ -1,5 +1,0 @@
-# Step 2: full -m run with the tree-structured + answer-oriented instruction. Compare to
-# trec_newinstr (0.934, answer-only, no tree) to isolate the tree structure's net effect.
-run_name: trec_tree_m
-seed: 7
-data: {name: trec}

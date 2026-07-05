@@ -1,9 +1,7 @@
-# Best method on the larger encoder. Best -m config was trec_newinstr (0.934): new answer-oriented
-# hand-written instruction (code default) + covariance dedup + flat/tree pool 64 + flash. This is
-# that exact method with encoder -l. Expectation from prior -l runs: instruction differences wash
-# out at -l (~0.95 noise band: baseline_l 0.952, cov_l 0.950, pro_tuned_l 0.952). This run tests
-# whether the best -m method beats that band at -l, or confirms -l saturation.
+# Best pure-NLI recipe on the larger encoder: 0.954 on TREC (seed 7).
 run_name: trec_best_l
 seed: 7
-data: {name: trec}
-encoder: {model: dleemiller/finecat-nli-l}
+data:
+  name: trec
+encoder:
+  model: dleemiller/finecat-nli-l

@@ -1,4 +1,10 @@
+# The committed method on SST-2 (binary sentiment).
 run_name: sst2
 seed: 7
-data: {name: sst2}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}
+data:
+  name: sst2
+lm:
+  extra_body: # pin the OpenRouter provider for reproducible LM caching
+    provider:
+      order: [deepseek]
+      allow_fallbacks: false

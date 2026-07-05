@@ -1,7 +1,0 @@
-# Lee's hypothesis: at pool=64 the weaker (but valuable) balanced-tree group features get crowded
-# out by strong one-vs-rest features. Give them room at pool=128. Compare to trec_tree_m (tree@64,
-# 0.926) and trec_newinstr (list@64, 0.934).
-run_name: trec_tree128_m
-seed: 7
-data: {name: trec}
-pool: {size: 128}

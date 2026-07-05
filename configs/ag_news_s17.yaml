@@ -1,4 +1,0 @@
-run_name: ag_news_s17
-seed: 17
-data: {name: ag_news}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}

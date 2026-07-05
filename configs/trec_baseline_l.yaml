@@ -1,7 +1,0 @@
-# Clean instruction A/B: hand-written GeneratePool instruction + flash + -l (same proposer as
-# trec_tuned_l, only the instruction differs). Compare to trec_tuned_l to isolate the tuned
-# instruction's effect at -l; compare to trec_pro_l to isolate flash-vs-pro at the baseline prompt.
-run_name: trec_baseline_l
-seed: 7
-data: {name: trec}
-encoder: {model: dleemiller/finecat-nli-l}

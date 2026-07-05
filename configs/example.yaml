@@ -1,0 +1,47 @@
+# Fully-commented reference config: every knob, with its default. Copy and trim.
+# Run with: uv run nli-boost run configs/example.yaml
+
+run_name: example
+seed: 7
+
+data:
+  name: trec # ag_news | sst2 | trec | 20newsgroups (built-in benchmark loaders)
+  train_size: 2000
+  val_size: 500
+  test_size: 2000
+
+encoder:
+  model: dleemiller/finecat-nli-l # the NLI cross-encoder — the method's capacity knob
+  batch_size: 128
+  max_text_chars: 1200 # texts normalized+truncated to this before scoring/caching
+  device: cuda
+  verbose: true # progress lines on long GPU scoring passes
+
+lm:
+  model: openrouter/deepseek/deepseek-v4-flash # the hypothesis proposer (litellm id)
+  max_tokens: 12000
+  temperature: 1.0
+
+dedup:
+  kind: covariance # covariance (behavioral, needs data) | sts (text-space, low-data choice)
+  threshold: 0.95 # |Pearson| for covariance; cosine for sts (~0.9 sensible there)
+  ref_size: 400 # covariance only: train subsample the score vectors are correlated on
+  model: sentence-transformers/all-MiniLM-L6-v2 # sts only: the sentence encoder
+
+pool:
+  size: 64 # generated hypotheses (fixed ones below don't count toward this)
+  rounds: 6 # evolution cap; patience usually exits earlier
+  patience: 2 # stop when held-out CV accuracy stops improving
+  min_keep_frac: 0.5 # never prune below this fraction in one round
+  rank_sample: 800 # subsample for the permutation-importance ranking
+  # Hand-written hypotheses that are ALWAYS kept: scored and fit alongside the generated
+  # pool, but treated as a fixed baseline in evolution (never pruned; generated hypotheses
+  # must add marginal value over them — same mechanism as the TF-IDF channel).
+  fixed_hypotheses:
+    - The text asks what an abbreviation stands for.
+    - The text can be answered with a number.
+  # from_run: trec  # reuse a previous run's pool instead of generating (encoder finalization)
+
+lexical:
+  kind: tfidf_svd # none | tfidf_svd — optional free lexical channel, also an evolution baseline
+  dims: 128

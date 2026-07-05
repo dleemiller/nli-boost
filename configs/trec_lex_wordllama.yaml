@@ -1,6 +1,0 @@
-run_name: trec_lex_wordllama
-seed: 7
-data: {name: trec}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}
-lexical: {kind: wordllama, dims: 128}
-pool: {from_run: trec}

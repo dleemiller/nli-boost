@@ -47,6 +47,11 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
     hypotheses : list[str] | None
         The natural-language hypotheses — the feature vocabulary. Required before
         ``transform``; produced by the (separate) generation/evolution step.
+    fixed_hypotheses : list[str] | None
+        Hand-written hypotheses that are ALWAYS part of the model: scored and fit
+        alongside the rest, but never pruned — during generation/evolution they act as
+        a fixed baseline (like a TF-IDF block), so generated hypotheses must add
+        marginal value over them. Prepended to ``hypotheses_``.
     encoder : str
         HuggingFace cross-encoder id (entailment=0, neutral=1, contradiction=2).
     score_mode : {"entail_contradict", "entail", "contrast"}
@@ -94,6 +99,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         self,
         hypotheses=None,
         *,
+        fixed_hypotheses=None,
         encoder=_DEFAULT_ENCODER,
         score_mode="entail_contradict",
         device="cuda",
@@ -112,6 +118,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         random_state=0,
     ):
         self.hypotheses = hypotheses
+        self.fixed_hypotheses = fixed_hypotheses
         self.encoder = encoder
         self.score_mode = score_mode
         self.device = device
@@ -154,11 +161,12 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         ``pipe.fit(X, y, hyp__baseline_features=Z)``.)"""
         if self.score_mode not in _SCORE_MODES:
             raise ValueError(f"score_mode must be one of {_SCORE_MODES}, got {self.score_mode!r}")
+        fixed = list(self.fixed_hypotheses or [])
         if self.hypotheses:
-            self.hypotheses_ = list(self.hypotheses)
+            self.hypotheses_ = fixed + [h for h in self.hypotheses if h not in fixed]
             self._scorer = None  # lazy; built on first transform
         else:
-            self.hypotheses_ = self._generate(X, y, baseline_features)  # builds self._scorer
+            self.hypotheses_ = fixed + self._generate(X, y, baseline_features, fixed)
             if not self.hypotheses_:
                 raise ValueError("hypothesis generation produced an empty pool")
         return self
@@ -222,7 +230,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
 
     # -- generation (training side; needs the `train` extras) ----------------
 
-    def _generate(self, X, y, baseline_features=None) -> list[str]:
+    def _generate(self, X, y, baseline_features=None, fixed=()) -> list[str]:
         if X is None or y is None:
             raise ValueError(
                 "No `hypotheses` given: call fit(X, y) with texts+labels to generate them "
@@ -255,8 +263,15 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         deduper = self._make_deduper(texts, y, rng)
         proposer = Proposer(LMConfig(model=self.lm), CostTracker())
         pool = generate_pool(
-            proposer, deduper, self.task, self.class_definitions, examples, self.n_hypotheses
+            proposer, deduper, self.task, self.class_definitions, examples, self.n_hypotheses, fixed=fixed
         )
+        # fixed hypotheses join the evolution baseline: never pruned, and generated hypotheses
+        # must add marginal value over their features (same mechanism as any baseline block)
+        if fixed:
+            blocks = [scorer.features(texts, list(fixed))]
+            if baseline_features is not None:
+                blocks.append(baseline_features)
+            baseline_features = np.concatenate(blocks, axis=1)
         if self.evolve:  # opt-in: refine the static pool (CV-prune weak, refill hot-spots)
             from types import SimpleNamespace
 

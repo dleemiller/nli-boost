@@ -1,6 +1,0 @@
-# From-scratch run with the NEW covariance deduper (all prior runs used STS dedup).
-# flash + hand-written + -l; compare to trec_baseline_l (identical but STS dedup) to isolate dedup.
-run_name: trec_cov_l
-seed: 7
-data: {name: trec}
-encoder: {model: dleemiller/finecat-nli-l}

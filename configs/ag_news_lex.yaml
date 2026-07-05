@@ -1,6 +1,0 @@
-run_name: ag_news_lex
-seed: 7
-data: {name: ag_news}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}
-lexical: {kind: tfidf_svd, dims: 128}
-pool: {from_run: ag_news}

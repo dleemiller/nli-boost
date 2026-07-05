@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class DataConfig(BaseModel):
@@ -25,11 +25,16 @@ class EncoderConfig(BaseModel):
 
 
 class DedupConfig(BaseModel):
-    """Feature-space (covariance) dedup: drop a candidate whose entailment score vector is
-    ~collinear with a kept one. Behavioral, not textual; no separate STS model."""
+    """Candidate dedup during generation. `covariance` drops a candidate whose entailment score
+    vector is ~collinear with a kept one (behavioral, needs data); `sts` compares hypothesis
+    TEXTS with a bi-encoder (data-free — the low-data choice)."""
 
-    corr_threshold: float = 0.95  # |Pearson| above this = redundant feature (multicollinearity)
-    ref_size: int = 400  # stratified train subsample the score vectors are correlated on
+    kind: Literal["covariance", "sts"] = "covariance"
+    # rejection threshold: |Pearson| for covariance; cosine for sts (~0.9 is sensible there).
+    # ("corr_threshold" accepted for configs saved by older runs.)
+    threshold: float = Field(0.95, validation_alias=AliasChoices("threshold", "corr_threshold"))
+    ref_size: int = 400  # covariance only: stratified train subsample the vectors are correlated on
+    model: str = "sentence-transformers/all-MiniLM-L6-v2"  # sts only: the sentence encoder
 
 
 class LMConfig(BaseModel):
@@ -52,6 +57,10 @@ class PoolConfig(BaseModel):
     patience: int = 2  # stop when held-out CV accuracy stops improving
     min_keep_frac: float = 0.5  # never prune below this fraction in one round
     rank_sample: int = 800  # stability ranking needs no full-matrix precision
+    # hand-written hypotheses that are ALWAYS kept: scored and fit alongside the generated
+    # pool, but treated as a fixed baseline in evolution (never pruned; generated hypotheses
+    # must add marginal value over them — same mechanism as the TF-IDF channel).
+    fixed_hypotheses: list[str] = []
     # reuse the pool from a previous run instead of generating: this is how a
     # pool is finalized with a bigger encoder (hypotheses transfer; only re-score)
     from_run: str | None = None

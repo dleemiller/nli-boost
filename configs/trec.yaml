@@ -1,4 +1,10 @@
+# The committed method on TREC-6 at the default (-m) encoder. ~7 min, <$0.01.
 run_name: trec
 seed: 7
-data: {name: trec}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}
+data:
+  name: trec
+lm:
+  extra_body: # pin the OpenRouter provider for reproducible LM caching
+    provider:
+      order: [deepseek]
+      allow_fallbacks: false

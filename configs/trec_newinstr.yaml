@@ -1,6 +1,0 @@
-# Test the updated hand-written instruction (answer-oriented style added) at -m, where instruction
-# quality shows (at -l everything washed to ~0.95 noise). Compare to committed `trec` (old
-# instruction + STS dedup, 0.920). This run: new instruction + covariance dedup + -m.
-run_name: trec_newinstr
-seed: 7
-data: {name: trec}

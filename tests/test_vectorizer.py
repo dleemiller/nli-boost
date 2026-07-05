@@ -260,6 +260,28 @@ def test_fit_evolves_when_enabled(monkeypatch):
     assert v.transform(["z"]).shape == (1, 2 * len(v.hypotheses_))
 
 
+def test_fixed_hypotheses_prepended_and_protected(monkeypatch):
+    import nli_boost.proposer as prop_mod
+
+    # provided-hypotheses path: fixed come first, duplicates collapsed
+    v = HypothesisVectorizer(["h a", "FIX one"], fixed_hypotheses=["FIX one", "FIX two"]).fit()
+    assert v.hypotheses_ == ["FIX one", "FIX two", "h a"]
+
+    # generation path: fixed are in the LM's avoid list and dedup baseline, and lead the pool
+    fake = FakeProposer(generate_batches=[["gen one", "gen two"]])
+    monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
+    w = HypothesisVectorizer(
+        task="t",
+        class_definitions=["A: x"],
+        n_hypotheses=2,
+        fixed_hypotheses=["FIX one"],
+        dedup=TextOnlyDeduper(),
+    )
+    w.fit(["a", "b"], [0, 1])
+    assert w.hypotheses_ == ["FIX one", "gen one", "gen two"]
+    assert "FIX one" in fake.generate_calls[0]["avoid"]  # LM told not to duplicate it
+
+
 def test_fit_generate_requires_data_and_metadata():
     with pytest.raises(ValueError):
         HypothesisVectorizer().fit()  # no hypotheses and no (X, y)

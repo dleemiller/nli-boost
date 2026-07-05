@@ -1,4 +1,10 @@
+# The committed method on AG News (4-class topic).
 run_name: ag_news
 seed: 7
-data: {name: ag_news}
-lm: {extra_body: {provider: {order: [deepseek], allow_fallbacks: false}}}
+data:
+  name: ag_news
+lm:
+  extra_body: # pin the OpenRouter provider for reproducible LM caching
+    provider:
+      order: [deepseek]
+      allow_fallbacks: false
