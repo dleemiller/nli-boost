@@ -1739,3 +1739,13 @@ make_pipeline(TfidfVectorizer, TruncatedSVD(128))]), HGB(lr=.12,l2=.01)). Result
 convention issues found — nothing needed rework; the vectorizer composes idiomatically (Pipeline /
 FeatureUnion / ColumnTransformer / clone / GridSearchCV-ready / feature names). Locked in as
 tests/test_sklearn_workflow.py (skips unless the run + score cache are present; cached -l, no GPU).
+
+## 2026-07-05 (hourly) — from-scratch train via STANDARD sklearn workflow = 0.956
+
+Ran a genuine from-scratch train through plain sklearn: HypothesisVectorizer(task=..., class_definitions
+=..., n_hypotheses=64, encoder=-l) with NO hypotheses -> fit(X,y) GENERATES the pool via the LM
+(deepseek-flash) + fresh -l encoding, inside Pipeline(FeatureUnion([nli, tfidf->svd128]), HGB(.12,.01)).
+Generated 64 meaningful answer-oriented hyps; TEST acc **0.9560** (vs evolved best_l_max 0.964; ==
+tuned_l_lex 0.956, within noise). So the standard sklearn workflow trains end-to-end from scratch and
+lands in the -l band; evolution (CLI, step 3) is the ~+0.008 (noise-level) squeeze on top. Confirms
+fit-generation works live (LM+GPU), not just fakes. README now has training code examples.

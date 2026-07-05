@@ -110,8 +110,33 @@ The full pipeline (`nli-boost run`) is:
 4. **Head** — a CV-selected classical head over the entail+contradict (+ optional TF-IDF) features;
    one held-out test evaluation (`pool_cv`) is the only reported number.
 
-`HypothesisVectorizer(task=..., class_definitions=[...]).fit(X, y)` runs steps 1–2 (a static pool) for
-quick sklearn-native use; the CLI's evolution (step 3) yields the stronger pools.
+**Train sklearn-native.** With no `hypotheses`, `fit(X, y)` generates a static pool (steps 1–2) from
+the data — a standard sklearn `fit`, just needing the `train` extras and the task metadata:
+
+```python
+from nli_boost import HypothesisVectorizer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+vec = HypothesisVectorizer(
+    task="Classify the type of answer a question is asking for.",
+    class_definitions=["ABBR: abbreviation", "ENTY: entity", "DESC: description",
+                       "HUM: person", "LOC: location", "NUM: number"],
+    class_names=["ABBR", "ENTY", "DESC", "HUM", "LOC", "NUM"],
+    n_hypotheses=64,
+    encoder="dleemiller/finecat-nli-l",
+)
+clf = Pipeline([("hyp", vec), ("clf", HistGradientBoostingClassifier())])
+clf.fit(train_texts, y_train)   # vec.fit generates the pool via the LM, then the head fits
+clf.score(test_texts, y_test)
+
+vec.save("my_pool.json")        # persist hypotheses+encoder for later dspy-free inference
+#   later: HypothesisVectorizer.load("my_pool.json")
+```
+
+The vectorizer's `fit` stops at a *static* pool. The CLI's **evolution** (step 3) — CV-pruning weak
+hypotheses and refilling against confusion hot-spots — is what produces the strongest pools; use
+`nli-boost run` for that, then `HypothesisVectorizer.from_run(...)` to serve it.
 
 Artifacts per run in `runs/<run_name>/`: `model.json` (the pool — the model is a list of English
 sentences — plus head params), `log.jsonl` (evolution audit trail: every prune with its reason),
