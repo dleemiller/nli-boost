@@ -166,7 +166,10 @@ def load(cfg: DataConfig, seed: int) -> Bundle:
 
     idx = stratified_indices(y_train, cfg.train_size + cfg.val_size, rng)
     tr, va = idx[: cfg.train_size], idx[cfg.train_size : cfg.train_size + cfg.val_size]
-    te = stratified_indices(y_test, min(cfg.test_size, len(y_test)), rng)
+    # test split uses its OWN seeded RNG so the test set depends only on (dataset, seed, test_size)
+    # — NOT on train_size/val_size. Two runs that differ only in train size are then comparable
+    # (same held-out test) instead of silently drawing different test rows.
+    te = stratified_indices(y_test, min(cfg.test_size, len(y_test)), np.random.default_rng(seed))
 
     return Bundle(
         name=cfg.name,

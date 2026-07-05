@@ -1798,3 +1798,14 @@ ALL 500 test but in different shuffle order -> np.array_equal fails though the S
 Accuracies identical so verdict unaffected. Fix option (Lee's call): draw the test split from a
 seed-only RNG independent of train/val sizes — but that changes which test rows are drawn when
 test_size < len(test) (e.g. ag_news), invalidating existing runs' test sets; deferred.
+
+## 2026-07-05 — compare test-set bug FIXED + trec_full McNemar
+
+Fixed data.load: the test split now uses its own seeded RNG (default_rng(seed)) instead of the
+train/val RNG, so the test set depends only on (dataset, seed, test_size), not train_size/val_size.
+Runs differing only in train size are now directly comparable. Verified: compare runs/trec_full
+runs/trec_best_l_max now works -> trec_full 0.962 vs best_l_max 0.964, delta +0.002, discordant 9
+(4/5), McNemar p=1.0 — NOT significant. Full-train == 2k-train on TREC test, saturation confirmed.
+(Caveat: for datasets that SUBSAMPLE test, e.g. ag_news test_size 2000<7600, this changes which rows
+are drawn vs old runs — intended; the new invariant is worth it. TREC test=all 500, set unchanged.)
+27 affected tests pass, ruff clean.
