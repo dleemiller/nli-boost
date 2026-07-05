@@ -1622,3 +1622,37 @@ The method's real, reliable win is over lexical/TF-IDF (interpretable features t
 not over zero-shot NLI at -m on these two. Backlog item "judge ag_news/sst2 seeds 7,17" -> CLOSED.
 (These are -m; -l would lift both but the encoder saturates. No McNemar vs baselines — the +-0.005
 gaps are visibly within noise.) No code change; decision-independent of the evolve a/b/c question.
+
+## 2026-07-05 — STATE OF PROJECT (capstone; cheap autonomous work exhausted)
+
+Committed method: LM-written NLI hypotheses -> frozen cross-encoder entail/contradict scores ->
+covariance-deduped, evolved pool -> CV-selected classical head (+ optional TF-IDF channel). Evolve is
+currently grow-then-select + accept gate + checkpoint-best (commit 785e051) — UNDER REVIEW (see below).
+
+What this session established (all honest protocol, pool_cv):
+- Encoder is the only reliable accuracy lever (-m -> -l ~+5pt, p=0.024). Instruction/proposer/tree/
+  pool-size/lexical-vs-not all wash out at -l (~0.95 saturation band).
+- Best -m recipe = answer-oriented instruction (0.934 vs 0.920 original, seed 7). Best -l point
+  estimate 0.964 (best_l_max, tfidf + lexical-aware pruning) but NOT sig vs tuned_l_lex 0.956 (p=0.42).
+- Lexical-aware pruning (marginal-over-TF-IDF) committed: minimizes redundant NLI features -> fewer
+  forward passes at inference. Sound; kept.
+- Cross-dataset (ag_news/sst2, -m): method >> TF-IDF (+4-24pt) but only TIES zero-shot NLI. Value =
+  multi-class carving (trec/ag_news) + interpretable features beating bag-of-words; adds ~nothing over
+  zero-shot on binary sentiment.
+
+OPEN DECISION (Lee's; blocks further progress) — grow-then-select overfits on TREC:
+- It's monotone on held-out (0.9114->0.9313) but held-out is ANTI-correlated with test (corr -0.585);
+  a SELECTION ARTIFACT (independent 2000-CV is flat / +0.126 with test). Test DROPPED: growselect 0.948
+  vs old-evolve best_l_max 0.964 (McNemar p=0.02). checkpoint-best ships the max-held-out = worst-test
+  pool. Old blind-swap evolve's churn was implicit regularization.
+- Options: (a) revert evolve to blind-swap (regularized, 0.964); (b) [recommended] independent held-out
+  for accept gate + selection (nested CV) — validated as removing the anti-correlation, but signal is
+  weak on saturated TREC; (c) drop checkpoint-best (won't save it). ANY fix must be validated where
+  evolution has real headroom — 20newsgroups / ag_news — NOT TREC.
+
+Closed this session (no action needed): generation-time variance filter (2% vacuous, already pruned);
+plateau-epsilon tune (no-op on testable trajectory); cross-dataset judging.
+
+RECOMMENDATION: pause both crons. No cheap, decision-independent, non-noise work remains. Next real
+progress = Lee picks the evolve fix (then implement + validate on 20ng), or greenlights a headroom-
+dataset run. Idle otherwise.
