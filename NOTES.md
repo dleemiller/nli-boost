@@ -1686,3 +1686,16 @@ COMMITTEE, not optimizing one pool — which also dodges the grow-select overfit
 held-out to overfit; diverse pools average out). Next step (needs runs, Lee's call): a proper
 same-method 3-seed ensemble for genuine variance reduction + error bars. Backlog "multi-pool ensemble"
 -> validated on cached proxy; promote to a real 3-seed run when a direction is chosen. No code change.
+
+## 2026-07-05 — checkpoint-best is REDUNDANT with the accept gate (verified)
+
+Lee's question: did best-checkpoint change the result? NO. Verified on growselect_l checkpoints:
+rounds 7/8/9 are the IDENTICAL pool (accept gate reverted all three), so shipped == best checkpoint
+(round 7) == last-round pool. checkpoint-best rescued nothing. Reason: with the accept gate ON the
+running pool never drifts below best, so last==best always. checkpoint-best only acts WITHOUT an accept
+gate (old blind-swap evolve, pool drifts post-peak) — and there the overfit finding (held-out anti-
+correlated with test) says it would HURT (shipping the higher-held-out peak = lower test; best_l_max
+shipped its DRIFTED last pool and got 0.964).
+=> Both this-session additions fail to earn their keep: checkpoint-best (redundant/harmful),
+grow-then-select+accept-gate (overfits, -0.016 test, p=0.02). Strengthens option (a) REVERT to
+blind-swap. Awaiting Lee's decision.
