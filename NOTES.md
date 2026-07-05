@@ -1603,3 +1603,22 @@ independent held-out validated as the fix but signal weak on TREC], or (b) a ful
 HEADROOM dataset (20newsgroups/ag_news) where evolution can actually matter — TREC -l is saturated
 (round 0-1 already ~0.95, rest is noise). No further cheap TREC diagnostics remain. Idle; awaiting a
 direction from Lee.
+
+## 2026-07-05 (hourly) — JUDGED: cross-dataset validation (ag_news/sst2, seeds 7/17, -m)
+
+Top backlog item, decision-independent. Committed pool method vs baselines (pool_cv, honest protocol):
+  ag_news (topic, 4-cls): method 0.891 (s7) / 0.8895 (s17)  | zero-shot-NLI 0.8855 | tfidf 0.8485
+  sst2 (sentiment, bin) : method 0.9404 (s7) / 0.9404 (s17) | zero-shot-NLI 0.945  | tfidf 0.7007
+Pools read for reward-hacking: CLEAN — ag_news topic hyps (stock indices, sports leagues, product
+launches), sst2 sentiment hyps (disappointment, enthusiasm, sarcasm, pos/neg adjectives). Meaningful,
+no artifacts.
+
+VERDICT: method >> tfidf everywhere (+4.3pt ag_news, +24pt sst2) but only TIES zero-shot NLI —
+marginally above on topic (+0.005) and marginally BELOW on binary sentiment (-0.005), both within
+test noise. Seed stability excellent (ag_news delta 0.0015; sst2 identical). Interpretation: the
+pool+head's value concentrates on MULTI-CLASS carving (trec question-type, ag_news topic); on BINARY
+sentiment a single zero-shot hypothesis already suffices, so the pool adds ~nothing over zero-shot.
+The method's real, reliable win is over lexical/TF-IDF (interpretable features that beat bag-of-words),
+not over zero-shot NLI at -m on these two. Backlog item "judge ag_news/sst2 seeds 7,17" -> CLOSED.
+(These are -m; -l would lift both but the encoder saturates. No McNemar vs baselines — the +-0.005
+gaps are visibly within noise.) No code change; decision-independent of the evolve a/b/c question.
