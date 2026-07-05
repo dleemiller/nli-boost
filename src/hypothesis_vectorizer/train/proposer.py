@@ -12,8 +12,8 @@ from pathlib import Path
 import dspy
 from pydantic import BaseModel
 
-from .config import LMConfig
-from .costs import CostTracker
+from ..config import LMConfig
+from ..costs import CostTracker
 
 _RULES = (
     "Each hypothesis must be a single declarative, present-tense sentence about 'the text' "
@@ -222,7 +222,7 @@ def generate_pool(
     passes, keeping only novel (deduped) statements. `fixed` are user-written hypotheses already in
     the model — the LM is told to avoid them and candidates are deduped against them, but they do
     not count toward `size`. Shared by the training runner and HypothesisVectorizer.fit."""
-    from .dedup import norm_statement
+    from ..dedup import norm_statement
 
     pool: list[str] = []
     seen: set[str] = {norm_statement(f) for f in fixed}

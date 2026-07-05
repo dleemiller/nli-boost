@@ -16,11 +16,11 @@ import json
 import numpy as np
 
 from . import data
-from .cache import ScoreCache
-from .config import RunConfig
-from .costs import CostTracker
-from .dedup import Deduper
-from .encoder import EntailmentScorer
+from ..cache import ScoreCache
+from ..config import RunConfig
+from ..costs import CostTracker
+from ..dedup import Deduper
+from ..encoder import EntailmentScorer
 from .evolve import evolve
 from .head import cv_selected_head, evaluate
 from .proposer import Proposer, generate_pool
@@ -57,7 +57,7 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
     rng = np.random.default_rng(cfg.seed)
     if deduper is None:
         if cfg.dedup.kind == "sts":  # text-space, data-free (the low-data choice)
-            from .dedup import STSDeduper
+            from ..dedup import STSDeduper
 
             deduper = STSDeduper(model=cfg.dedup.model, threshold=cfg.dedup.threshold)
         else:  # covariance: correlate candidate score vectors on a train subsample

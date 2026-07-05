@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .config import DataConfig
+from ..config import DataConfig
 
 
 @dataclass

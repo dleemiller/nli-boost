@@ -3,7 +3,7 @@ from conftest import FakeScorer, make_bundle
 
 from hypothesis_vectorizer.cache import ScoreCache
 from hypothesis_vectorizer.encoder import digest, normalize
-from hypothesis_vectorizer.head import cv_selected_head, evaluate
+from hypothesis_vectorizer.train.head import cv_selected_head, evaluate
 
 
 def test_cv_selected_head_learns_separable_data():

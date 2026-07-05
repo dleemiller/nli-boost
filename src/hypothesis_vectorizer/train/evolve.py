@@ -21,10 +21,10 @@ from sklearn.inspection import permutation_importance
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
-from .config import PoolConfig
+from ..config import PoolConfig
 from .data import Bundle, labeled_examples, stratified_indices
-from .dedup import Deduper
-from .encoder import EntailmentScorer
+from ..dedup import Deduper
+from ..encoder import EntailmentScorer
 from .proposer import Proposer
 
 

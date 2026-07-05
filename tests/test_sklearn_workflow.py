@@ -49,7 +49,7 @@ def _pipeline():
 
 
 def test_sklearn_pipeline_reproduces_0964():
-    from hypothesis_vectorizer.data import load
+    from hypothesis_vectorizer.train.data import load
     from sklearn.base import clone
 
     pipe, cfg = _pipeline()

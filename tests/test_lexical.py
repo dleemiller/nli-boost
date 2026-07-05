@@ -2,8 +2,8 @@ import numpy as np
 from conftest import FakeProposer, FakeScorer, TextOnlyDeduper, make_bundle
 
 from hypothesis_vectorizer.config import DataConfig, LexicalConfig, PoolConfig, RunConfig
-from hypothesis_vectorizer.lexical import LexicalFeaturizer
-from hypothesis_vectorizer.runner import run
+from hypothesis_vectorizer.train.lexical import LexicalFeaturizer
+from hypothesis_vectorizer.train.runner import run
 
 
 def test_tfidf_svd_shapes_and_train_only_fit():

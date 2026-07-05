@@ -18,11 +18,11 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import binomtest
 
-from .cache import ScoreCache
-from .config import RunConfig
-from .costs import CostTracker
+from ..cache import ScoreCache
+from ..config import RunConfig
+from ..costs import CostTracker
 from .data import load
-from .encoder import EntailmentScorer
+from ..encoder import EntailmentScorer
 from .head import cv_selected_head, fit_head
 from .runner import build_matrices
 

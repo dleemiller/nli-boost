@@ -239,13 +239,13 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         if not self.task or not self.class_definitions:
             raise ValueError("Generating hypotheses requires `task` and `class_definitions`.")
         try:
-            from .proposer import Proposer, generate_pool  # train extra: pulls dspy
+            from .train.proposer import Proposer, generate_pool  # train extra: pulls dspy
         except ImportError as e:  # pragma: no cover - depends on install
             raise ImportError(
                 'Generating hypotheses needs the training dependencies: pip install "hypothesis-vectorizer[train]".'
             ) from e
         from .config import LMConfig
-        from .data import labeled_examples
+        from .train.data import labeled_examples
 
         texts = self._coerce_texts(X)
         y = np.asarray(y)
@@ -276,7 +276,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
             from types import SimpleNamespace
 
             from .config import PoolConfig
-            from .evolve import evolve as evolve_pool
+            from .train.evolve import evolve as evolve_pool
 
             bundle = SimpleNamespace(
                 task=self.task,
@@ -309,8 +309,8 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
 
             return STSDeduper(threshold=self.dedup_threshold, device=self.device)
         if self.dedup == "covariance":
-            from .data import stratified_indices
             from .dedup import Deduper
+            from .train.data import stratified_indices
 
             ref_idx = stratified_indices(y, min(400, len(texts)), rng)  # correlate on this sample
             return Deduper(self._get_scorer(), [texts[int(i)] for i in ref_idx], self.dedup_threshold)

@@ -9,7 +9,7 @@ the same channel is composed via sklearn FeatureUnion around HypothesisVectorize
 
 import numpy as np
 
-from .config import LexicalConfig
+from ..config import LexicalConfig
 
 
 class LexicalFeaturizer:

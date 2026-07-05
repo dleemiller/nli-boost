@@ -2,7 +2,7 @@ import numpy as np
 from conftest import FakeProposer, FakeScorer, TextOnlyDeduper, make_bundle
 
 from hypothesis_vectorizer.config import PoolConfig
-from hypothesis_vectorizer.evolve import evolve, hotspots, rank_hypotheses
+from hypothesis_vectorizer.train.evolve import evolve, hotspots, rank_hypotheses
 
 
 def test_rank_informative_hypotheses_first():

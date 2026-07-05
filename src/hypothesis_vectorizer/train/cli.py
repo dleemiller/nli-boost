@@ -18,7 +18,7 @@ if os.environ.get("APIKEY") and not os.environ.get("OPENROUTER_API_KEY"):
 @app.command()
 def run(config: Path):
     """Run the method from a YAML config; artifacts land in runs/<run_name>/."""
-    from .config import RunConfig
+    from ..config import RunConfig
     from .runner import run as run_method
 
     cfg = RunConfig.from_yaml(config)

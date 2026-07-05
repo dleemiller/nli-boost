@@ -70,6 +70,9 @@ def main():
     ap.add_argument("--limit", type=int, default=20000, help="closed+narrative complaints (natural rate)")
     ap.add_argument("--per-class", type=int, default=None, help="balanced: this many of each relief class")
     ap.add_argument("--encoder", default="dleemiller/finecat-nli-l")
+    # CFPB narratives are ~10x TREC's length; 512 chars halves tokenize+inference time and the
+    # relief signal (what happened + what the consumer wants) is concentrated up front
+    ap.add_argument("--max-text-chars", type=int, default=512)
     ap.add_argument("--n-hypotheses", type=int, default=64)
     ap.add_argument("--evolve", action="store_true", help="run the CV-prune/refill loop in fit")
     ap.add_argument("--cache", default="cache/nli_scores.sqlite")
@@ -123,6 +126,7 @@ def main():
         ],
         class_names=["no relief", "monetary relief"],
         encoder=args.encoder,
+        max_text_chars=args.max_text_chars,
         n_hypotheses=args.n_hypotheses,
         evolve=args.evolve,
         cache_path=args.cache,
@@ -132,7 +136,15 @@ def main():
 
     # 2) SERVE the fixed pool (ColumnTransformer clones its steps on fit, which would otherwise
     #    re-generate) alongside the same tabular block -> classifier
-    served = HypothesisVectorizer(hypotheses=gen.hypotheses_, encoder=args.encoder, cache_path=args.cache)
+    # verbose=True: the final transform is a long silent scoring pass otherwise — a quiet run
+    # here was once misdiagnosed as a stall and killed (NOTES 2026-07-05)
+    served = HypothesisVectorizer(
+        hypotheses=gen.hypotheses_,
+        encoder=args.encoder,
+        max_text_chars=args.max_text_chars,
+        cache_path=args.cache,
+        verbose=True,
+    )
     model = Pipeline(
         [
             (

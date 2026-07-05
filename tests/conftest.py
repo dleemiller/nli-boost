@@ -7,7 +7,7 @@ uninformative contradiction half.
 
 import numpy as np
 
-from hypothesis_vectorizer.data import Bundle
+from hypothesis_vectorizer.train.data import Bundle
 
 
 class FakeScorer:

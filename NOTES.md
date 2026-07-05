@@ -1875,3 +1875,24 @@ DEFERRED (needs GPU, ~7-min validating run; gate not met this cycle):
 - validating run when GPU frees: trec at (eps=0.003, patience=4) vs (eps=1e-4, patience=4), compare
   rounds-to-stop AND pool_cv. Commit only if pool_cv holds (>= within noise) and rounds-to-stop drops.
 No code changed / committed this cycle (validation gate requires a run; GPU reserved for Lee's training).
+
+## 2026-07-05 — repo cleanup while GPU busy: train/ subpackage, isolation guard, CFPB-diagnosis CORRECTION
+1. REORG: flat src -> core + train/. Core (inference, importable with base deps only): vectorizer,
+   encoder, cache, dedup, config, costs. train/ (may import dspy/datasets/typer/rich): proposer,
+   evolve, runner, data, head, cli, compare, lexical. Mirrors the [train] extra; public API unchanged
+   (from hypothesis_vectorizer import HypothesisVectorizer). CLI entrypoint -> hypothesis_vectorizer.train.cli:app.
+2. NEW tests/test_inference_isolation.py: subprocess with dspy/datasets/typer/rich/dotenv/litellm
+   BLOCKED in import machinery; exercises import + fit(fixed pool) + feature names + clone + pickle +
+   save/load. Enforces the "inference is dspy-free" promise structurally. Passes in <1s.
+3. HONEST CORRECTION of 2026-07-05 CFPB diagnosis: the sqlite-lookup theory was WRONG. Measured on
+   the real 2.9GB cache: get_logits is fast either way (20x500 lookups = 6.3ms with a (hyp_hash,
+   model, text_hash) index vs 4.0ms via the PK — sqlite decomposes IN() into per-value PK seeks).
+   Built the index, measured, found no benefit (+1.8GB disk), DROPPED it and reverted cache.py;
+   VACUUMed the DB (4.7G -> 2.5G). What the CFPB run was ACTUALLY doing: scoring normally but
+   SILENTLY — the served vectorizer defaulted verbose=False, and WAL commits land once per 8192-pair
+   chunk, which at long-text throughput is minutes apart. I killed a healthy run. Prevention:
+   examples/cfpb.py served vectorizer now verbose=True, and --max-text-chars default 512 (halves
+   tokenize+inference for 1200-char narratives). Real lesson: long texts make TOKENIZATION+inference
+   the cost, not the cache.
+4. Removed stray empty CLAUDE.md.
+All 40 tests pass, ruff clean. No GPU touched (index build/vacuum were disk-only).
