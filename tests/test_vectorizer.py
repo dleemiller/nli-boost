@@ -142,6 +142,26 @@ def test_fit_generates_when_no_hypotheses(monkeypatch):
     assert v.transform(["z"]).shape == (1, 2 * 3)
 
 
+def test_fit_evolves_when_enabled(monkeypatch):
+    import nli_boost.dedup as dedup_mod
+    import nli_boost.proposer as prop_mod
+
+    fake = FakeProposer(
+        generate_batches=[[f"gen {i}" for i in range(8)]],
+        refill_batches=[[f"ref {r}-{i}" for i in range(4)] for r in range(6)],
+    )
+    monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
+    monkeypatch.setattr(dedup_mod, "Deduper", lambda *a, **k: TextOnlyDeduper())
+
+    texts = [f"text sample number {i}" for i in range(40)]
+    y = np.array([0, 1] * 20)
+    v = HypothesisVectorizer(task="classify", class_definitions=["A: x", "B: y"], n_hypotheses=8, evolve=True)
+    v.fit(texts, y)  # generate -> evolve (CV-prune/refill)
+    assert v.hypotheses_
+    assert fake.generate_calls and fake.refill_calls  # both generation AND evolution ran
+    assert v.transform(["z"]).shape == (1, 2 * len(v.hypotheses_))
+
+
 def test_fit_generate_requires_data_and_metadata():
     with pytest.raises(ValueError):
         HypothesisVectorizer().fit()  # no hypotheses and no (X, y)

@@ -56,10 +56,12 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
     cache_path : str | Path | None
         sqlite score cache. A path persists scores across processes; ``None`` uses
         an in-process cache (repeat transforms are free within the instance).
-    task, class_definitions, class_names, n_hypotheses, lm, dedup_corr
+    task, class_definitions, class_names, n_hypotheses, lm, dedup_corr, evolve
         Generation knobs, used ONLY by ``fit(X, y)`` when ``hypotheses`` is None — the
         pool is then generated from the data via the LM proposer, which requires the
-        ``train`` extras (dspy). Ignored when ``hypotheses`` is supplied.
+        ``train`` extras (dspy). Ignored when ``hypotheses`` is supplied. ``evolve=True``
+        additionally refines the generated pool with the CV-prune/refill loop (stronger
+        pool, more LM calls); ``evolve=False`` (default) stops at a static pool.
 
     Notes
     -----
@@ -84,6 +86,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         n_hypotheses=64,
         lm="openrouter/deepseek/deepseek-v4-flash",
         dedup_corr=0.95,
+        evolve=False,
     ):
         self.hypotheses = hypotheses
         self.encoder = encoder
@@ -99,6 +102,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         self.n_hypotheses = n_hypotheses
         self.lm = lm
         self.dedup_corr = dedup_corr
+        self.evolve = evolve
 
     # -- sklearn API ---------------------------------------------------------
 
@@ -198,11 +202,31 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         examples = _labeled_examples(texts, y, self.class_names)
         rng = np.random.default_rng(0)
         ref_idx = rng.choice(len(texts), size=min(400, len(texts)), replace=False)
-        deduper = Deduper(self._get_scorer(), [texts[i] for i in ref_idx], self.dedup_corr)
+        scorer = self._get_scorer()
+        deduper = Deduper(scorer, [texts[i] for i in ref_idx], self.dedup_corr)
         proposer = Proposer(LMConfig(model=self.lm), CostTracker())
-        return generate_pool(
+        pool = generate_pool(
             proposer, deduper, self.task, self.class_definitions, examples, self.n_hypotheses
         )
+        if self.evolve:  # opt-in: refine the static pool (CV-prune weak, refill hot-spots)
+            from types import SimpleNamespace
+
+            from .config import PoolConfig
+            from .evolve import evolve as evolve_pool
+
+            names = self.class_names or [f"class {c}" for c in range(int(y.max()) + 1)]
+            bundle = SimpleNamespace(
+                task=self.task,
+                class_names=names,
+                class_descriptions=self.class_definitions,
+                train_texts=texts,
+                y_train=y,
+                n_classes=len(names),
+            )
+            pool, _history = evolve_pool(
+                bundle, pool, scorer, proposer, deduper, PoolConfig(size=self.n_hypotheses), seed=0
+            )
+        return pool
 
     # -- persistence & config -----------------------------------------------
 
