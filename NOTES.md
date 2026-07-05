@@ -1438,3 +1438,14 @@ baseline. Mechanistically plausible (best_l pool has ABBR answer-hyps "asks what
 stands for") but n=9 on one seed = NOT a result; needs seed-sweep to believe. Verdict: best method at
 -l = tied at ~0.95; refinements only reshuffle which tiny class eats errors. Reinforces low-N thesis
 (docs/low-n-plan.md): encoder-rich regime saturates method refinements.
+
+## 2026-07-04 (hourly check) — trec_best_l_max RUNNING (lexical-aware pruning)
+
+Status: alive/healthy (WAL fresh <30s, log advancing), round 1/10, ~5 min in. First run exercising
+the new marginal-over-TF-IDF pruning (commit a595fae). Pre-registered expectation (README/prior
+notes): accuracy holds in the ~0.95 -l band while the NLI pool SHRINKS (fewer forward passes/pred).
+Early signature confirms more aggressive pruning vs best_l (NLI-only): round 0 pruned 13 vs 7,
+round 1 pruned 10 vs 12; held-out 0.9114/0.9151 (on NLI+lexical). Verdict deferred to completion:
+will judge on (1) final NLI pool size < best_l's 64, (2) test acc within noise of best_l 0.954 /
+tuned_l_lex 0.956, (3) which hypothesis types got dropped (expect wh-word/keyword ones lexical covers).
+No new job launched (one in flight; no CUDA parallelism).
