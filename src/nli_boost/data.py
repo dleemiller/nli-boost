@@ -9,7 +9,6 @@ deterministically per seed, and test is evaluated exactly once per run.
 from dataclasses import dataclass
 
 import numpy as np
-from datasets import load_dataset
 
 from .config import DataConfig
 
@@ -47,14 +46,19 @@ def stratified_indices(y: np.ndarray, n: int, rng: np.random.Generator) -> np.nd
 
 
 def labeled_examples(
-    bundle: Bundle, per_class: int, rng: np.random.Generator, max_chars: int = 400
+    texts: list[str],
+    y: np.ndarray,
+    class_names: list[str],
+    per_class: int,
+    rng: np.random.Generator,
+    max_chars: int = 400,
 ) -> list[str]:
     """Stratified '[class] text' samples shown to the proposer LM."""
     out = []
-    for c, name in enumerate(bundle.class_names):
-        idx = np.flatnonzero(bundle.y_train == c)
+    for c, name in enumerate(class_names):
+        idx = np.flatnonzero(y == c)
         for i in rng.choice(idx, size=min(per_class, len(idx)), replace=False):
-            out.append(f"[{name}] {bundle.train_texts[i][:max_chars]}")
+            out.append(f"[{name}] {texts[i][:max_chars]}")
     return out
 
 
@@ -142,6 +146,8 @@ _SPECS = {
 
 
 def load(cfg: DataConfig, seed: int) -> Bundle:
+    from datasets import load_dataset  # train extra; keeps `nli_boost.data` importable without it
+
     spec = _SPECS[cfg.name]
     rng = np.random.default_rng(seed)
 

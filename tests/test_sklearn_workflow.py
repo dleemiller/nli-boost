@@ -49,7 +49,6 @@ def _pipeline():
 
 
 def test_sklearn_pipeline_reproduces_0964():
-    from nli_boost.config import RunConfig  # noqa: F401  (ensure import path)
     from nli_boost.data import load
     from sklearn.base import clone
 

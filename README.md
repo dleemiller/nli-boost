@@ -12,7 +12,7 @@ Two clean halves:
 - **Inference** is just NLI scoring against a fixed hypothesis list → a scikit-learn transformer,
   [`HypothesisVectorizer`](#inference-hypothesisvectorizer). No LM, no `dspy`.
 - **Training** generates + evolves the hypothesis list from labeled data (needs an LLM). Kept in a
-  separate `train` dependency group so inference installs stay light.
+  separate `train` extra so inference installs stay light.
 
 ```python
 from nli_boost import HypothesisVectorizer
@@ -31,7 +31,7 @@ pip install nli-boost           # inference only: encoder + sklearn, no dspy
 pip install "nli-boost[train]"  # + hypothesis generation/evolution (dspy), dataset loading, CLI
 ```
 
-Developing from source (uv installs the `train` group by default):
+Developing from source (`uv sync` installs the dev group, which includes the `train` extra):
 
 ```bash
 uv sync
@@ -47,9 +47,10 @@ dspy** — only the encoder.
 
 **Constructor** — `HypothesisVectorizer(hypotheses=None, *, encoder="dleemiller/finecat-nli-l",
 score_mode="entail_contradict", device="cuda", batch_size=128, max_text_chars=1200, cache_path=None,
-task=None, class_definitions=None, class_names=None, n_hypotheses=64, lm=..., dedup_corr=0.95)`.
-Standard sklearn params (stored verbatim; `get_params`/`set_params`/`clone`/`GridSearchCV` all work).
-The last six are generation knobs, used only by `fit` when `hypotheses` is None (see below).
+verbose=False, task=None, class_definitions=None, class_names=None, n_hypotheses=64, lm=...,
+dedup_corr=0.95, evolve=False, random_state=0)`. Standard sklearn params (stored verbatim;
+`get_params`/`set_params`/`clone`/`GridSearchCV` all work). The generation knobs (`task` onward) are
+used only by `fit` when `hypotheses` is None (see below).
 
 **`transform(X)`** — accepts a 1-D sequence of strings *or* a single text column (as
 `ColumnTransformer` hands over). Output columns per `score_mode`:
@@ -64,7 +65,7 @@ The last six are generation knobs, used only by `fit` when `hypotheses` is None 
 
 **`fit(X, y)`** — fixes the hypothesis set. If you passed `hypotheses`, they're used as-is (pure
 transformer, no LM). If not, the pool is **generated from `(X, y)`** via the proposer — which requires
-the `train` extras and `task` + `class_definitions` set (clear error otherwise). So an inference-only
+the `train` extra and `task` + `class_definitions` set (clear error otherwise). So an inference-only
 install can score with a supplied/loaded pool but cannot generate one.
 
 **Construct / persist** — `from_run(dir)` (a trained run's `config.yaml` encoder + `model.json` pool),
@@ -93,7 +94,7 @@ makes repeat scoring across runs ~free. `None` uses an in-process cache for the 
 
 ## Training: producing a pool
 
-Needs the `train` extras. Either drive it from a YAML config with the CLI, or let the vectorizer's
+Needs the `train` extra (`pip install "nli-boost[train]"`). Either drive it from a YAML config with the CLI, or let the vectorizer's
 `fit` generate a static pool.
 
 ```bash
@@ -115,7 +116,7 @@ The full pipeline (`nli-boost run`) is:
    one held-out test evaluation (`pool_cv`) is the only reported number.
 
 **Train sklearn-native.** With no `hypotheses`, `fit(X, y)` generates a static pool (steps 1–2) from
-the data — a standard sklearn `fit`, just needing the `train` extras and the task metadata:
+the data — a standard sklearn `fit`, just needing the `train` extra and the task metadata:
 
 ```python
 from nli_boost import HypothesisVectorizer

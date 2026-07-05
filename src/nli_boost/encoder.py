@@ -97,7 +97,7 @@ class EntailmentScorer:
                 by_hyp.setdefault(j, []).append((t_hashes[i], norm_t[i], z))
             for j, rows in by_hyp.items():
                 self.cache.put_logits(self.cfg.model, h_hashes[j], norm_h[j], rows)
-            if len(pending) > 2 * _GPU_CHUNK:
+            if self.cfg.verbose and len(pending) > 2 * _GPU_CHUNK:
                 print(
                     f"    encoder: {min(start + _GPU_CHUNK, len(pending))}/{len(pending)} pairs scored",
                     flush=True,

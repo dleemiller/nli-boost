@@ -217,7 +217,7 @@ def evolve(
     sub_texts = [bundle.train_texts[i] for i in sub]
     sub_y = bundle.y_train[sub]
     lex_sub = lex_train[sub] if lex_train is not None else None
-    examples = labeled_examples(bundle, per_class=3, rng=rng)
+    examples = labeled_examples(bundle.train_texts, bundle.y_train, bundle.class_names, per_class=3, rng=rng)
 
     seen = {s.casefold() for s in pool}
     history: list[dict] = []

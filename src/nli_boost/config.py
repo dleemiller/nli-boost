@@ -21,6 +21,7 @@ class EncoderConfig(BaseModel):
     batch_size: int = 128
     max_text_chars: int = 1200  # normalize+truncate BEFORE hashing so cache keys are stable
     device: str = "cuda"
+    verbose: bool = True  # progress lines on long GPU scoring passes (CLI on; vectorizer off)
 
 
 class DedupConfig(BaseModel):

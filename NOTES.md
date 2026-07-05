@@ -1749,3 +1749,25 @@ Generated 64 meaningful answer-oriented hyps; TEST acc **0.9560** (vs evolved be
 tuned_l_lex 0.956, within noise). So the standard sklearn workflow trains end-to-end from scratch and
 lands in the -l band; evolution (CLI, step 3) is the ~+0.008 (noise-level) squeeze on top. Confirms
 fit-generation works live (LM+GPU), not just fakes. README now has training code examples.
+
+## 2026-07-05 — full code review of the sklearn migration (fixes committed)
+
+Combed all ~2400 lines. Found & fixed:
+1. PACKAGING BUG: `pip install "nli-boost[train]"` was documented but train was a PEP-735
+   dependency-GROUP — groups don't ship in wheel metadata (verified Provides-Extra: None). Now a real
+   extra; dev group self-references "nli-boost[train]" so `uv sync` still gives contributors everything.
+2. Version mismatch pyproject 0.1.0 vs __init__ 0.3.0 -> 0.3.0.
+3. DRY/CONSISTENCY: vectorizer had its own _labeled_examples with a DIFFERENT prompt format
+   ("text -> name" vs the method's "[name] text") and a non-stratified dedup ref sample — vectorizer-
+   generated pools saw different prompts than CLI pools. Unified on data.labeled_examples (+
+   stratified_indices); datasets import made lazy so nli_boost.data is importable without it.
+   Inference path now dspy-free AND datasets-free (sklearn users bring numpy/lists — Lee's point).
+4. sklearn nativeness: random_state param (stochastic fit-generation), verbose=False param gating the
+   encoder's progress prints (library etiquette; CLI keeps them via EncoderConfig.verbose=True).
+5. save() now requires fitted (was silently writing the constructor arg).
+6. from_config: generic constructor-param passthrough (carries generation params, ignores unknowns);
+   from_run passes a minimal dict + uses the run config's cache_dir (no lm-dict collision).
+7. Dead code: duplicate _labeled_examples, stray numpy re-import, dead RunConfig test import.
+Reviewed-and-fine: runner/compare/head/evolve/proposer/cache/dedup/cli (single-purpose, documented);
+build_matrices and vectorizer both delegating to EntailmentScorer.features is the correct DRY point.
+33 tests pass (incl. new: save-requires-fitted, from_config passthrough), ruff clean.

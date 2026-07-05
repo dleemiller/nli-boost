@@ -1,6 +1,6 @@
 [project]
 name = "nli-boost"
-version = "0.1.0"
+version = "0.3.0"
 description = "Interpretable text classification from LLM-written NLI hypotheses scored by a frozen cross-encoder, as scikit-learn features"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,6 +14,17 @@ dependencies = [
     "torch>=2.12.1",
 ]
 
+[project.optional-dependencies]
+# Training: hypothesis generation/evolution (LM), dataset loading, the CLI.
+# A real extra (ships in wheel metadata) so `pip install "nli-boost[train]"` works.
+train = [
+    "datasets>=5.0.0",
+    "dspy>=3.2.1",
+    "python-dotenv>=1.2.2",
+    "rich>=15.0.0",
+    "typer>=0.26.8",
+]
+
 [project.scripts]
 nli-boost = "nli_boost.cli:app"
 
@@ -25,9 +36,8 @@ build-backend = "hatchling.build"
 packages = ["src/nli_boost"]
 
 [tool.uv]
-# Training deps live in the `train` group, not `dependencies`, so `pip install nli-boost`
-# stays inference-only (no dspy). default-groups installs them here for dev/test.
-default-groups = ["dev", "train"]
+# dev group (which pulls in the train extra) is installed by default for `uv sync`.
+default-groups = ["dev"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -38,15 +48,8 @@ src = ["src", "tests"]
 
 [dependency-groups]
 dev = [
+    "nli-boost[train]",  # dev/test env always has the training side (tests exercise it via fakes)
     "pre-commit>=4.6.0",
     "pytest>=9.1.1",
     "ruff>=0.15.20",
-]
-# Hypothesis generation/evolution (LM), dataset loading, and the CLI. Not needed for inference.
-train = [
-    "datasets>=5.0.0",
-    "dspy>=3.2.1",
-    "python-dotenv>=1.2.2",
-    "rich>=15.0.0",
-    "typer>=0.26.8",
 ]

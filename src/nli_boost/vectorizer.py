@@ -56,12 +56,15 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
     cache_path : str | Path | None
         sqlite score cache. A path persists scores across processes; ``None`` uses
         an in-process cache (repeat transforms are free within the instance).
-    task, class_definitions, class_names, n_hypotheses, lm, dedup_corr, evolve
+    verbose : bool
+        Print progress lines during long encoder scoring passes (default False).
+    task, class_definitions, class_names, n_hypotheses, lm, dedup_corr, evolve, random_state
         Generation knobs, used ONLY by ``fit(X, y)`` when ``hypotheses`` is None — the
         pool is then generated from the data via the LM proposer, which requires the
-        ``train`` extras (dspy). Ignored when ``hypotheses`` is supplied. ``evolve=True``
-        additionally refines the generated pool with the CV-prune/refill loop (stronger
-        pool, more LM calls); ``evolve=False`` (default) stops at a static pool.
+        ``train`` extra (``pip install "nli-boost[train]"``). Ignored when ``hypotheses``
+        is supplied. ``evolve=True`` additionally refines the generated pool with the
+        CV-prune/refill loop (stronger pool, more LM calls); ``evolve=False`` (default)
+        stops at a static pool. ``random_state`` seeds example sampling and evolution.
 
     Notes
     -----
@@ -80,6 +83,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         batch_size=128,
         max_text_chars=1200,
         cache_path=None,
+        verbose=False,
         task=None,
         class_definitions=None,
         class_names=None,
@@ -87,6 +91,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         lm="openrouter/deepseek/deepseek-v4-flash",
         dedup_corr=0.95,
         evolve=False,
+        random_state=0,
     ):
         self.hypotheses = hypotheses
         self.encoder = encoder
@@ -95,7 +100,8 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         self.batch_size = batch_size
         self.max_text_chars = max_text_chars
         self.cache_path = cache_path
-        # generation params (only used by fit when `hypotheses` is None; require the `train` extras)
+        self.verbose = verbose
+        # generation params (only used by fit when `hypotheses` is None; require the `train` extra)
         self.task = task
         self.class_definitions = class_definitions
         self.class_names = class_names
@@ -103,6 +109,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         self.lm = lm
         self.dedup_corr = dedup_corr
         self.evolve = evolve
+        self.random_state = random_state
 
     # -- sklearn API ---------------------------------------------------------
 
@@ -179,6 +186,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
                 device=self.device,
                 batch_size=self.batch_size,
                 max_text_chars=self.max_text_chars,
+                verbose=self.verbose,
             )
             cache = ScoreCache(self.cache_path if self.cache_path is not None else ":memory:")
             self._scorer = EntailmentScorer(cfg, cache, CostTracker())
@@ -201,19 +209,20 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
             from .proposer import Proposer, generate_pool  # train extra: pulls dspy
         except ImportError as e:  # pragma: no cover - depends on install
             raise ImportError(
-                "Generating hypotheses needs the training dependencies (dspy). Install nli-boost "
-                "with the `train` dependency group."
+                'Generating hypotheses needs the training dependencies: pip install "nli-boost[train]".'
             ) from e
         from .config import LMConfig
+        from .data import labeled_examples, stratified_indices
         from .dedup import Deduper
 
         texts = self._coerce_texts(X)
         y = np.asarray(y)
-        examples = _labeled_examples(texts, y, self.class_names)
-        rng = np.random.default_rng(0)
-        ref_idx = rng.choice(len(texts), size=min(400, len(texts)), replace=False)
+        names = self.class_names or [f"class {c}" for c in range(int(y.max()) + 1)]
+        rng = np.random.default_rng(self.random_state)
+        examples = labeled_examples(texts, y, names, per_class=3, rng=rng)
+        ref_idx = stratified_indices(y, min(400, len(texts)), rng)  # dedup correlates on this sample
         scorer = self._get_scorer()
-        deduper = Deduper(scorer, [texts[i] for i in ref_idx], self.dedup_corr)
+        deduper = Deduper(scorer, [texts[int(i)] for i in ref_idx], self.dedup_corr)
         proposer = Proposer(LMConfig(model=self.lm), CostTracker())
         pool = generate_pool(
             proposer, deduper, self.task, self.class_definitions, examples, self.n_hypotheses
@@ -224,7 +233,6 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
             from .config import PoolConfig
             from .evolve import evolve as evolve_pool
 
-            names = self.class_names or [f"class {c}" for c in range(int(y.max()) + 1)]
             bundle = SimpleNamespace(
                 task=self.task,
                 class_names=names,
@@ -234,18 +242,25 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
                 n_classes=len(names),
             )
             pool, _history = evolve_pool(
-                bundle, pool, scorer, proposer, deduper, PoolConfig(size=self.n_hypotheses), seed=0
+                bundle,
+                pool,
+                scorer,
+                proposer,
+                deduper,
+                PoolConfig(size=self.n_hypotheses),
+                seed=self.random_state,
             )
         return pool
 
     # -- persistence & config -----------------------------------------------
 
     def save(self, path: str | Path) -> None:
-        """Write the inference artifact (hypotheses + encoder config) as JSON."""
+        """Write the fitted inference artifact (hypotheses + encoder config) as JSON."""
+        check_is_fitted(self, "hypotheses_")
         Path(path).write_text(
             json.dumps(
                 {
-                    "hypotheses": self.hypotheses_ if hasattr(self, "hypotheses_") else self.hypotheses,
+                    "hypotheses": self.hypotheses_,
                     "encoder": self.encoder,
                     "score_mode": self.score_mode,
                     "device": self.device,
@@ -263,46 +278,35 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
 
     @classmethod
     def from_config(cls, config: dict | str | Path) -> "HypothesisVectorizer":
-        """Build from a dict or YAML file. `encoder` may be a model-id string or a
-        mapping ({model, device, batch_size, max_text_chars}) — so run config.yaml
-        files work directly. If `hypotheses` is present the result is fitted."""
+        """Build from a dict or YAML file of constructor params. `encoder` may be a
+        model-id string or a mapping ({model, device, batch_size, max_text_chars}) — so
+        run config.yaml files work directly. Unknown keys are ignored. If `hypotheses`
+        is present the result is fitted."""
         if isinstance(config, (str, Path)):
             config = yaml.safe_load(Path(config).read_text())
-        enc = config.get("encoder", {})
-        enc = {"model": enc} if isinstance(enc, str) else dict(enc or {})
-        vec = cls(
-            hypotheses=config.get("hypotheses"),
-            encoder=enc.get("model", _DEFAULT_ENCODER),
-            score_mode=config.get("score_mode", "entail_contradict"),
-            device=enc.get("device", "cuda"),
-            batch_size=enc.get("batch_size", 128),
-            max_text_chars=enc.get("max_text_chars", 1200),
-            cache_path=config.get("cache_path"),
-        )
+        config = dict(config)
+        enc = config.get("encoder")
+        if isinstance(enc, dict):  # nested run-config form -> flatten onto constructor params
+            config["encoder"] = enc.get("model", _DEFAULT_ENCODER)
+            for k in ("device", "batch_size", "max_text_chars"):
+                if k in enc:
+                    config.setdefault(k, enc[k])
+        params = cls().get_params()
+        vec = cls(**{k: v for k, v in config.items() if k in params})
         return vec.fit() if vec.hypotheses else vec
 
     @classmethod
     def from_run(cls, run_dir: str | Path) -> "HypothesisVectorizer":
         """Load a trained run (its config.yaml encoder + model.json hypotheses) into a
-        fitted vectorizer ready for inference."""
+        fitted vectorizer ready for inference, sharing the run's score cache."""
         run_dir = Path(run_dir)
         cfg = yaml.safe_load((run_dir / "config.yaml").read_text())
         model = json.loads((run_dir / "model.json").read_text())
-        cfg["hypotheses"] = model["hypotheses"]
-        cfg.setdefault("cache_path", str(run_dir.parent.parent / "cache" / "nli_scores.sqlite"))
-        return cls.from_config(cfg)
-
-
-def _labeled_examples(texts, y, class_names, per_class: int = 3) -> list[str]:
-    """A few 'text -> class' lines per class, to ground the proposer's generation prompt."""
-    import numpy as np
-
-    y = np.asarray(y)
-    names = class_names or [f"class {c}" for c in range(int(y.max()) + 1)]
-    rng = np.random.default_rng(0)
-    out: list[str] = []
-    for c in np.unique(y):
-        idx = np.flatnonzero(y == c)
-        for i in rng.choice(idx, size=min(per_class, len(idx)), replace=False):
-            out.append(f"{texts[int(i)]} -> {names[int(c)]}")
-    return out
+        return cls.from_config(
+            {
+                "hypotheses": model["hypotheses"],
+                "encoder": cfg.get("encoder", {}),
+                "score_mode": cfg.get("score_mode", "entail_contradict"),
+                "cache_path": str(Path(cfg.get("cache_dir", "cache")) / "nli_scores.sqlite"),
+            }
+        )

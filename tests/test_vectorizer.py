@@ -129,6 +129,13 @@ def test_save_load_roundtrip(tmp_path):
     np.testing.assert_allclose(w.transform(["a", "bb"]), v.transform(["a", "bb"]))
 
 
+def test_save_requires_fitted(tmp_path):
+    from sklearn.exceptions import NotFittedError
+
+    with pytest.raises(NotFittedError):
+        HypothesisVectorizer(HYPS).save(tmp_path / "nope.json")  # save is the FITTED artifact
+
+
 def test_from_config_yaml(tmp_path):
     cfg = tmp_path / "c.yaml"
     cfg.write_text(
@@ -140,6 +147,14 @@ def test_from_config_yaml(tmp_path):
     assert v.encoder == "dleemiller/finecat-nli-l" and v.batch_size == 16 and v.device == "cpu"
     assert v.hypotheses_ == HYPS  # present -> fitted
     assert v.transform(["a"]).shape == (1, len(HYPS))
+
+
+def test_from_config_carries_generation_params_and_ignores_unknowns():
+    v = HypothesisVectorizer.from_config(
+        {"task": "classify", "class_definitions": ["A: x"], "n_hypotheses": 8, "run_name": "junk"}
+    )
+    assert v.task == "classify" and v.class_definitions == ["A: x"] and v.n_hypotheses == 8
+    assert not hasattr(v, "hypotheses_")  # no hypotheses -> unfitted, ready for fit(X, y)
 
 
 def test_from_run(tmp_path):

@@ -67,7 +67,9 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
         history: list[dict] = []
     else:
         _phase(f"generating pool of {cfg.pool.size}")
-        examples = data.labeled_examples(bundle, per_class=3, rng=rng)
+        examples = data.labeled_examples(
+            bundle.train_texts, bundle.y_train, bundle.class_names, per_class=3, rng=rng
+        )
         pool = generate_pool(
             proposer, deduper, bundle.task, bundle.class_descriptions, examples, cfg.pool.size
         )

@@ -1255,7 +1255,7 @@ wheels = [
 
 [[package]]
 name = "nli-boost"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -1267,12 +1267,7 @@ dependencies = [
     { name = "torch" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
+[package.optional-dependencies]
 train = [
     { name = "datasets" },
     { name = "dspy" },
@@ -1281,28 +1276,36 @@ train = [
     { name = "typer" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "nli-boost", extra = ["train"] },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
+    { name = "datasets", marker = "extra == 'train'", specifier = ">=5.0.0" },
+    { name = "dspy", marker = "extra == 'train'", specifier = ">=3.2.1" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "pydantic", specifier = ">=2.13.4" },
+    { name = "python-dotenv", marker = "extra == 'train'", specifier = ">=1.2.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "rich", marker = "extra == 'train'", specifier = ">=15.0.0" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
     { name = "sentence-transformers", specifier = ">=5.6.0" },
     { name = "torch", specifier = ">=2.12.1" },
+    { name = "typer", marker = "extra == 'train'", specifier = ">=0.26.8" },
 ]
+provides-extras = ["train"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "nli-boost", extras = ["train"] },
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.15.20" },
-]
-train = [
-    { name = "datasets", specifier = ">=5.0.0" },
-    { name = "dspy", specifier = ">=3.2.1" },
-    { name = "python-dotenv", specifier = ">=1.2.2" },
-    { name = "rich", specifier = ">=15.0.0" },
-    { name = "typer", specifier = ">=0.26.8" },
 ]
 
 [[package]]
