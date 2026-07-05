@@ -3,6 +3,7 @@
 A class-level fake scorer stands in for the GPU encoder so these run on CPU and survive
 sklearn clone() (Pipeline / ColumnTransformer clone their steps on fit)."""
 
+import json
 import pickle
 
 import numpy as np
@@ -112,6 +113,16 @@ def test_from_config_yaml(tmp_path):
     assert v.encoder == "dleemiller/finecat-nli-l" and v.batch_size == 16 and v.device == "cpu"
     assert v.hypotheses_ == HYPS  # present -> fitted
     assert v.transform(["a"]).shape == (1, len(HYPS))
+
+
+def test_from_run(tmp_path):
+    run = tmp_path / "runs" / "myrun"
+    run.mkdir(parents=True)
+    (run / "config.yaml").write_text("encoder: {model: enc/x, device: cpu}\nscore_mode: entail\n")
+    (run / "model.json").write_text(json.dumps({"hypotheses": HYPS}))
+    v = HypothesisVectorizer.from_run(run)  # config.yaml encoder + model.json pool -> fitted
+    assert v.hypotheses_ == HYPS and v.encoder == "enc/x" and v.score_mode == "entail"
+    assert v.transform(["a", "bb"]).shape == (2, len(HYPS))
 
 
 def test_pickle_drops_live_scorer():

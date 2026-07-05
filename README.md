@@ -68,25 +68,45 @@ uv run nli-boost compare runs/a runs/b            # paired McNemar: is a delta r
 
 ### Inference: `HypothesisVectorizer`
 
-Inference needs **no LM and no dspy** — just the encoder and the fitted hypothesis list. The model is
-a scikit-learn transformer, so it composes the usual ways:
+Inference is just NLI scoring against a fixed hypothesis list — **no LM, no dspy**. `HypothesisVectorizer`
+is a scikit-learn transformer: it turns a column of text into features by scoring, for each text, how
+strongly it entails (and contradicts) each hypothesis. Install inference-only with `pip install
+nli-boost` (core deps); the `train` dependency-group adds what's needed to *generate* pools.
 
 ```python
 from nli_boost import HypothesisVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import HistGradientBoostingClassifier
 
-vec = HypothesisVectorizer.from_run("runs/trec_best_l")     # config.yaml encoder + model.json pool
-Pipeline([("hyp", vec), ("clf", HistGradientBoostingClassifier())]).fit(texts, y)
-
-# score one text column alongside other tabular features:
-#   ColumnTransformer([("hyp", HypothesisVectorizer(hyps), "text"), ("num", StandardScaler(), num_cols)])
-# optional TF-IDF channel, plain sklearn:
-#   FeatureUnion([("nli", HypothesisVectorizer(hyps)), ("tfidf", make_pipeline(TfidfVectorizer(), TruncatedSVD(128)))])
+vec = HypothesisVectorizer.from_run("runs/trec_best_l")     # encoder (config.yaml) + pool (model.json)
+clf = Pipeline([("hyp", vec), ("clf", HistGradientBoostingClassifier())]).fit(texts, y)
+clf.predict(new_texts)
 ```
 
-`get_feature_names_out()` returns the hypotheses themselves, so feature importances stay readable.
-Install inference-only with `pip install nli-boost` (core deps); add `[train]`-group deps to generate pools.
+**Constructor** — `HypothesisVectorizer(hypotheses, *, encoder="dleemiller/finecat-nli-l",
+score_mode="entail_contradict", device="cuda", batch_size=128, max_text_chars=1200, cache_path=None)`.
+Standard sklearn params (introspectable via `get_params`/`set_params`, works with `clone`/`GridSearchCV`).
+
+**Input / output** — `transform(X)` accepts a 1-D sequence of strings or a single text column (as
+`ColumnTransformer` hands over). Output columns per `score_mode`: `entail_contradict` → `2·len(hypotheses)`
+(`[P(entail) | P(contradict)]`), `entail` → `len(hypotheses)`, `contrast` → `len(hypotheses)`
+(`P(entail) − P(contradict)`). `get_feature_names_out()` returns the hypotheses themselves, so feature
+importances stay readable.
+
+**Construct / persist** — `from_run(dir)` (a trained run's `config.yaml` + `model.json`),
+`from_config(dict_or_yaml)`, `save(path)` / `load(path)` (JSON: hypotheses + encoder config, no weights).
+A fitted vectorizer pickles cleanly (the live encoder/cache is dropped and rebuilt on demand).
+
+**Compose** — it's a plain transformer, so the usual sklearn machinery applies:
+
+```python
+# one text column alongside other tabular features:
+ColumnTransformer([("hyp", HypothesisVectorizer(hyps), "text"), ("num", StandardScaler(), num_cols)])
+
+# optional TF-IDF channel — plain sklearn, not baked in:
+FeatureUnion([("nli", HypothesisVectorizer(hyps)),
+              ("tfidf", make_pipeline(TfidfVectorizer(), TruncatedSVD(128)))])
+```
 
 Artifacts per run in `runs/<run_name>/`: the pool itself (`model.json` — the model is a list of
 English sentences), the evolution audit trail (`log.jsonl`: every prune with its reason, every

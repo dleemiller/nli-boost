@@ -50,8 +50,6 @@ class FakeProposer:
 class TextOnlyDeduper:
     """Real textual dedup behavior without the STS model."""
 
-    thr = 0.95  # covariance threshold, mirrors the real Deduper (used by evolve's _select_topk)
-
     def filter(self, candidates, against, seen):
         from nli_boost.dedup import norm_statement
 
