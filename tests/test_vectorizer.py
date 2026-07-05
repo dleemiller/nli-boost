@@ -182,6 +182,64 @@ def test_fit_generates_when_no_hypotheses(monkeypatch):
     assert v.transform(["z"]).shape == (1, 2 * 3)
 
 
+def test_sts_deduper_drops_near_duplicates(monkeypatch):
+    from nli_boost.dedup import STSDeduper
+
+    # fake embeddings: first word one-hot -> same first word = cosine 1.0
+    def fake_embed(self, texts):
+        words = sorted({t.split()[0] for t in texts})
+        return np.array([np.eye(len(words))[words.index(t.split()[0])] for t in texts])
+
+    monkeypatch.setattr(STSDeduper, "_embed", fake_embed)
+    d = STSDeduper(threshold=0.9)
+    seen: set[str] = set()
+    kept, rejected = d.filter(
+        ["alpha statement one", "alpha statement two", "beta statement"], against=[], seen=seen
+    )
+    assert kept == ["alpha statement one", "beta statement"]  # 2nd alpha = near-duplicate
+    assert any("sts" in r for r in rejected)
+
+
+def test_fit_dedup_accepts_custom_object_and_rejects_unknown(monkeypatch):
+    import nli_boost.proposer as prop_mod
+
+    fake = FakeProposer(generate_batches=[["h one", "h two"]])
+    monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
+    custom = TextOnlyDeduper()
+    v = HypothesisVectorizer(task="t", class_definitions=["A: x"], n_hypotheses=2, dedup=custom)
+    v.fit(["a", "b"], [0, 1])
+    assert v.hypotheses_ == ["h one", "h two"]  # went through the custom deduper
+
+    with pytest.raises(ValueError):
+        HypothesisVectorizer(task="t", class_definitions=["A: x"], dedup="nonsense").fit(["a"], [0])
+
+
+def test_fit_passes_baseline_features_to_evolution(monkeypatch):
+    import nli_boost.evolve as evolve_mod
+    import nli_boost.proposer as prop_mod
+
+    fake = FakeProposer(generate_batches=[["h one", "h two"]])
+    monkeypatch.setattr(prop_mod, "Proposer", lambda *a, **k: fake)
+    captured = {}
+
+    def fake_evolve(bundle, pool, scorer, proposer, deduper, cfg, seed, baseline_train=None):
+        captured["baseline"] = baseline_train
+        return pool, [{"round": 0, "heldout_acc": 0.9, "pool": list(pool)}]
+
+    monkeypatch.setattr(evolve_mod, "evolve", fake_evolve)
+
+    Z = np.random.default_rng(0).random((4, 3))  # e.g. other tabular columns
+    v = HypothesisVectorizer(
+        task="t", class_definitions=["A: x"], n_hypotheses=2, evolve=True, dedup=TextOnlyDeduper()
+    )
+    v.fit(["a", "b", "c", "d"], [0, 1, 0, 1], baseline_features=Z)
+    assert captured["baseline"] is not None and captured["baseline"].shape == (4, 3)
+    assert v.evolution_history_[0]["pool"]  # per-round pools saved on the instance
+
+    with pytest.raises(ValueError):  # misaligned baseline is refused
+        v.fit(["a", "b"], [0, 1], baseline_features=np.zeros((3, 2)))
+
+
 def test_fit_evolves_when_enabled(monkeypatch):
     import nli_boost.dedup as dedup_mod
     import nli_boost.proposer as prop_mod

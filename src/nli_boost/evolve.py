@@ -45,17 +45,18 @@ class Ranking:
 
 
 def rank_hypotheses(
-    x: np.ndarray, y: np.ndarray, m: int, seed: int, folds: int = 4, lex: np.ndarray | None = None
+    x: np.ndarray, y: np.ndarray, m: int, seed: int, folds: int = 4, baseline: np.ndarray | None = None
 ) -> Ranking:
     """x is the (n, 2m) NLI feature matrix; every sample is held out in exactly one fold.
 
-    `lex` (n, d), if given, is the cheap lexical channel as a FIXED baseline: it joins every
-    fold's model and drives the errors/hot spots, but is never ranked or pruned. Each NLI
-    hypothesis's importance then measures its MARGINAL value ON TOP OF lexical — a hypothesis
-    whose signal TF-IDF already carries scores ~0 and dies. Since an NLI feature costs a
-    cross-encoder forward pass at inference and TF-IDF is ~free, this minimizes the NLI pool
-    (and thus per-prediction cost) down to hypotheses that add semantics lexical cannot."""
-    xx = x if lex is None else np.concatenate([x, lex], axis=1)
+    `baseline` (n, d), if given, is any FIXED feature block the downstream head will also see —
+    TF-IDF, other tabular columns, embeddings. It joins every fold's model and drives the
+    errors/hot spots, but is never ranked or pruned. Each NLI hypothesis's importance then
+    measures its MARGINAL value ON TOP OF the baseline — a hypothesis whose signal the baseline
+    already carries scores ~0 and dies. Since an NLI feature costs a cross-encoder forward pass
+    at inference and baseline features are usually ~free, this minimizes the NLI pool (and thus
+    per-prediction cost) down to hypotheses that add semantics the baseline cannot."""
+    xx = x if baseline is None else np.concatenate([x, baseline], axis=1)
     imps = np.zeros((folds, xx.shape[1]))
     errors: list[tuple[int, int]] = []
     skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
@@ -68,7 +69,7 @@ def rank_hypotheses(
         preds = clf.predict(xx[ihe])
         errors += [(int(i), int(p)) for i, p in zip(ihe, preds) if p != y[i]]
 
-    # rank/prune only the NLI columns (first 2m: [entail | contradict]); lexical columns are baseline
+    # rank/prune only the NLI columns (first 2m: [entail | contradict]); baseline columns are fixed
     col_stability = (imps > 0).mean(axis=0)
     mean_imp = imps.mean(axis=0)
     hyp_importance = mean_imp[:m] + mean_imp[m : 2 * m]
@@ -200,15 +201,17 @@ def evolve(
     deduper: Deduper,
     cfg: PoolConfig,
     seed: int,
-    lex_train: np.ndarray | None = None,
+    baseline_train: np.ndarray | None = None,
 ) -> tuple[list[str], list[dict]]:
-    """Returns (final pool, per-round history). History is the audit trail:
-    every prune with its reason, every refill with its later target-AUC.
+    """Returns (final pool, per-round history). History is the audit trail AND the checkpoint
+    store: each round records the full `pool` it scored (with its held-out accuracy), so any
+    round's pool is recoverable post-hoc. The LAST pool is shipped — selecting max-held-out was
+    measured to overfit the CV proxy (NOTES 2026-07-05); the churn is regularization.
 
-    `lex_train` (n_train, d), if given, is the lexical channel over ALL train texts; the
-    ranking sees it as a fixed baseline so NLI hypotheses are pruned by MARGINAL value over
-    lexical (redundant-with-TF-IDF hypotheses die), and refill targets the confusions lexical
-    leaves behind."""
+    `baseline_train` (n_train, d), if given, is any FIXED feature block over ALL train texts
+    that the downstream head will also see (TF-IDF, other tabular columns, embeddings); the
+    ranking treats it as a fixed baseline so NLI hypotheses are pruned by MARGINAL value over
+    it, and refill targets the confusions the baseline leaves behind."""
     rng = np.random.default_rng(seed)
     if cfg.rank_sample and cfg.rank_sample < len(bundle.train_texts):
         sub = stratified_indices(bundle.y_train, cfg.rank_sample, rng)
@@ -216,7 +219,7 @@ def evolve(
         sub = np.arange(len(bundle.train_texts))
     sub_texts = [bundle.train_texts[i] for i in sub]
     sub_y = bundle.y_train[sub]
-    lex_sub = lex_train[sub] if lex_train is not None else None
+    baseline_sub = baseline_train[sub] if baseline_train is not None else None
     examples = labeled_examples(bundle.train_texts, bundle.y_train, bundle.class_names, per_class=3, rng=rng)
 
     seen = {s.casefold() for s in pool}
@@ -230,7 +233,7 @@ def evolve(
         x = scorer.features(sub_texts, pool)
         # fixed fold seed across rounds: the plateau check compares round-over-round
         # held-out accuracy, which is only meaningful on the SAME fold splits
-        ranking = rank_hypotheses(x, sub_y, m, seed, lex=lex_sub)
+        ranking = rank_hypotheses(x, sub_y, m, seed, baseline=baseline_sub)
 
         # instrumentation: did last round's refills hit their assigned hot spot?
         refill_aucs: list[float] = []
@@ -267,6 +270,7 @@ def evolve(
             {
                 "round": round_i,
                 "heldout_acc": round(acc, 4),
+                "pool": list(pool),  # checkpoint: the exact pool this round SCORED, recoverable
                 "survivors": survivors,
                 "failed": failed,
                 "refills": refills,

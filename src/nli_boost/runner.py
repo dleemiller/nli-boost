@@ -84,7 +84,7 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
             lex_train = feat.transform(bundle.train_texts)
         _phase(f"evolving (cap {cfg.pool.rounds} rounds, patience {cfg.pool.patience})")
         pool, history = evolve(
-            bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, lex_train=lex_train
+            bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, baseline_train=lex_train
         )
 
     # STAGE 3 — CV-selected head on the full train split; the optional lexical

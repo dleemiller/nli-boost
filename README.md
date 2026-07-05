@@ -10,7 +10,7 @@ adaptation lives entirely in the sentences, so the model *is* a readable list of
 Two clean halves:
 
 - **Inference** is just NLI scoring against a fixed hypothesis list → a scikit-learn transformer,
-  [`HypothesisVectorizer`](#inference-hypothesisvectorizer). No LM, no `dspy`.
+  [`HypothesisVectorizer`](#hypothesisvectorizer--api-reference). No LM, no `dspy`.
 - **Training** generates + evolves the hypothesis list from labeled data (needs an LLM). Kept in a
   separate `train` extra so inference installs stay light.
 
@@ -39,58 +39,96 @@ echo 'OPENROUTER_API_KEY=sk-or-...' > .env   # the hypothesis-proposer LM (train
 uv run pre-commit install
 ```
 
-## Inference: `HypothesisVectorizer`
+## `HypothesisVectorizer` — API reference
 
-A plain scikit-learn transformer that turns a column of text into NLI-entailment features against a
-fixed hypothesis set. Its "model" is the hypothesis list + encoder name, so it needs **no LM and no
-dspy** — only the encoder.
-
-**Constructor** — `HypothesisVectorizer(hypotheses=None, *, encoder="dleemiller/finecat-nli-l",
-score_mode="entail_contradict", device="cuda", batch_size=128, max_text_chars=1200, cache_path=None,
-verbose=False, task=None, class_definitions=None, class_names=None, n_hypotheses=64, lm=...,
-dedup_corr=0.95, evolve=False, random_state=0)`. Standard sklearn params (stored verbatim;
-`get_params`/`set_params`/`clone`/`GridSearchCV` all work). The generation knobs (`task` onward) are
-used only by `fit` when `hypotheses` is None (see below).
-
-**`transform(X)`** — accepts a 1-D sequence of strings *or* a single text column (as
-`ColumnTransformer` hands over). Output columns per `score_mode`:
-
-| `score_mode` | columns | meaning |
-|---|---|---|
-| `entail_contradict` (default) | `2·len(hypotheses)` | `[P(entail) ‖ P(contradict)]` |
-| `entail` | `len(hypotheses)` | `P(entail)` |
-| `contrast` | `len(hypotheses)` | `P(entail) − P(contradict)` |
-
-`get_feature_names_out()` returns the hypotheses themselves, so feature importances stay readable.
-
-**`fit(X, y)`** — fixes the hypothesis set. If you passed `hypotheses`, they're used as-is (pure
-transformer, no LM). If not, the pool is **generated from `(X, y)`** via the proposer — which requires
-the `train` extra and `task` + `class_definitions` set (clear error otherwise). So an inference-only
-install can score with a supplied/loaded pool but cannot generate one.
-
-**Construct / persist** — `from_run(dir)` (a trained run's `config.yaml` encoder + `model.json` pool),
-`from_config(dict_or_yaml)`, and `save(path)` / `load(path)` (JSON: hypotheses + encoder config, no
-weights). A fitted vectorizer pickles cleanly — the live encoder/cache handle is dropped and rebuilt
-on demand.
-
-**Compose** — it's a transformer, so the usual sklearn machinery applies:
+A scikit-learn transformer that turns a column of text into NLI-entailment features against a fixed
+hypothesis set. Its "model" is the hypothesis list + encoder name, so inference needs **no LM and no
+dspy** — only the encoder. With no `hypotheses`, `fit(X, y)` *generates* the set from your data
+(`train` extra).
 
 ```python
-# score one text column alongside other tabular features
-ColumnTransformer([("hyp", HypothesisVectorizer(hyps), "text"),
-                   ("num", StandardScaler(), ["price", "age"])])
-
-# optional TF-IDF channel — plain sklearn, not baked in
-FeatureUnion([("nli", HypothesisVectorizer(hyps)),
-              ("tfidf", make_pipeline(TfidfVectorizer(), TruncatedSVD(128)))])
+HypothesisVectorizer(
+    hypotheses=None, *, encoder="dleemiller/finecat-nli-l", score_mode="entail_contradict",
+    device="cuda", batch_size=128, max_text_chars=1200, cache_path=None, verbose=False,
+    task=None, class_definitions=None, class_names=None, n_hypotheses=64,
+    lm="openrouter/deepseek/deepseek-v4-flash", dedup="covariance", dedup_threshold=0.95,
+    evolve=False, random_state=0,
+)
 ```
 
-`cache_path` points at a sqlite score cache (raw logits keyed by text+hypothesis+model); a shared path
-makes repeat scoring across runs ~free. `None` uses an in-process cache for the instance's lifetime.
+### Parameters
 
-**Native sklearn.** It declares string-input estimator tags (like `TfidfVectorizer`), supports
-`set_output(transform="pandas")` (columns are the hypotheses), pickles, clones, and is
-`GridSearchCV`-ready; `sklearn.utils.estimator_checks.check_estimator` passes its applicable checks.
+| parameter | type / default | description |
+|---|---|---|
+| `hypotheses` | list[str], default None | The feature vocabulary. If given, `fit` uses it as-is (no LM anywhere). If None, `fit(X, y)` generates it (needs the `train` extra + `task`/`class_definitions`). |
+| `encoder` | str, `"dleemiller/finecat-nli-l"` | HF cross-encoder id (labels: entail=0, neutral=1, contradict=2). The method's capacity knob (`-m`→`-l` ≈ +5 pts). |
+| `score_mode` | `{"entail_contradict", "entail", "contrast"}` | Columns per hypothesis: both probabilities (2), P(entail) only (1), or P(entail)−P(contradict) (1). |
+| `device` | str, `"cuda"` | Encoder (and sts-dedup) device. |
+| `batch_size` | int, 128 | Encoder inference batch size. |
+| `max_text_chars` | int, 1200 | Texts are whitespace-normalized and truncated to this before scoring/caching (stable cache keys). |
+| `cache_path` | str \| Path \| None | sqlite score cache. A path persists raw logits across processes (repeat scoring ~free); None = in-process only. |
+| `verbose` | bool, False | Progress lines during long encoder passes. |
+| `task` | str, None | *(generation)* One-line task description shown to the proposer LM. |
+| `class_definitions` | list[str], None | *(generation)* `"NAME: one-line definition"` per class. |
+| `class_names` | list[str], None | *(generation)* Class display names; default `class 0..K`. |
+| `n_hypotheses` | int, 64 | *(generation)* Pool size to generate (and evolution's target size). |
+| `lm` | str | *(generation)* litellm model id for the proposer. |
+| `dedup` | `{"covariance", "sts"}` or object | *(generation)* Candidate dedup. `"covariance"`: reject candidates whose entail-score vectors are ~collinear with a kept one — behaviorally exact, needs enough data. `"sts"`: bi-encoder cosine on the hypothesis *texts* — data-free, the right choice at ~3–5 examples/class. Or any object with `.filter(candidates, against, seen)`. |
+| `dedup_threshold` | float, 0.95 | Rejection threshold (\|Pearson\| for covariance; cosine for sts, ~0.9 sensible). |
+| `evolve` | bool, False | *(generation)* Also run the CV-prune/refill loop inside `fit` — strongest pool, more LM calls. Avoid at very low N (CV over a handful of examples is noise). |
+| `random_state` | int, 0 | Seeds example sampling, dedup sampling, and evolution. |
+
+### Attributes
+
+| attribute | description |
+|---|---|
+| `hypotheses_` | The fitted hypothesis list (feature vocabulary). |
+| `evolution_history_` | After `fit` with `evolve=True`: one dict per round with the exact `pool` scored and its `heldout_acc` — **every round is saved and recoverable**, not just the last. |
+
+### Methods
+
+| method | description |
+|---|---|
+| `fit(X=None, y=None, baseline_features=None)` | Fix (or generate) the hypothesis set. `baseline_features` (n, d): any extra features the downstream head will also see — other tabular columns, TF-IDF, embeddings; with `evolve=True`, hypotheses are pruned by **marginal value over that fixed block**. In a Pipeline: `pipe.fit(X, y, hyp__baseline_features=Z)`. |
+| `transform(X)` | 1-D sequence of strings, or a single text column (as `ColumnTransformer` hands over) → `(n, k)` float array; `k` per `score_mode` (see table above ×`len(hypotheses_)`). |
+| `fit_transform(X, y=None, **fit_params)` | Standard `TransformerMixin`. |
+| `get_feature_names_out()` | The hypotheses themselves (`"entail: The text asks for a number."`) — importances stay readable. |
+| `save(path)` / `load(path)` | Persist / restore the fitted inference artifact (hypotheses + encoder config, JSON — no weights). |
+| `from_run(run_dir)` | Load a trained CLI run (`config.yaml` encoder + `model.json` pool) into a fitted vectorizer sharing the run's score cache. |
+| `from_config(dict_or_yaml)` | Build from constructor params as a dict/YAML; nested `encoder: {model, device, ...}` accepted; unknown keys ignored; fitted if `hypotheses` present. |
+| `get_params` / `set_params` / `set_output(transform="pandas")` | Standard sklearn surface; string-input estimator tags declared (like `TfidfVectorizer`); pickles/clones cleanly; `check_estimator` passes its applicable checks. |
+
+### Use cases
+
+**Text column + tabular features.** Compose with `ColumnTransformer`; during training, pass the
+tabular block as the evolution baseline so hypotheses that just re-encode it are pruned:
+
+```python
+Z = df[["price", "age"]].to_numpy()                       # features the head will also see
+vec = HypothesisVectorizer(task=..., class_definitions=..., evolve=True)
+vec.fit(df["text"], y, baseline_features=Z)               # prune by MARGINAL value over Z
+ct = ColumnTransformer([("hyp", vec, "text"), ("num", StandardScaler(), ["price", "age"])])
+```
+
+**TF-IDF channel.** Same mechanism — fit your TF-IDF pipeline, pass its output as
+`baseline_features`, then serve both via `FeatureUnion` (this is how the 0.964 TREC recipe works):
+
+```python
+tfidf = make_pipeline(TfidfVectorizer(), TruncatedSVD(128)).fit(texts)
+vec = HypothesisVectorizer(task=..., class_definitions=..., evolve=True)
+vec.fit(texts, y, baseline_features=tfidf.transform(texts))
+features = FeatureUnion([("nli", vec), ("tfidf", tfidf)])
+```
+
+**Low data (~3–5 examples/class).** Covariance dedup and CV evolution both need data they don't
+have; use text-space dedup and skip evolution — the pool is then a pure LM prior:
+
+```python
+vec = HypothesisVectorizer(task=..., class_definitions=...,
+                           dedup="sts", dedup_threshold=0.9, evolve=False)
+```
+
+(See [docs/low-n-plan.md](docs/low-n-plan.md) for the fuller low-N methodology.)
 
 ## Training: producing a pool
 

@@ -58,13 +58,30 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         an in-process cache (repeat transforms are free within the instance).
     verbose : bool
         Print progress lines during long encoder scoring passes (default False).
-    task, class_definitions, class_names, n_hypotheses, lm, dedup_corr, evolve, random_state
+    task, class_definitions, class_names, n_hypotheses, lm, evolve, random_state
         Generation knobs, used ONLY by ``fit(X, y)`` when ``hypotheses`` is None — the
         pool is then generated from the data via the LM proposer, which requires the
         ``train`` extra (``pip install "nli-boost[train]"``). Ignored when ``hypotheses``
         is supplied. ``evolve=True`` additionally refines the generated pool with the
         CV-prune/refill loop (stronger pool, more LM calls); ``evolve=False`` (default)
         stops at a static pool. ``random_state`` seeds example sampling and evolution.
+    dedup : {"covariance", "sts"} or object
+        Candidate dedup during generation. ``"covariance"`` (default) rejects candidates
+        whose entail-score vectors are ~collinear with a kept one — behaviorally exact but
+        needs enough data to estimate. ``"sts"`` compares hypothesis TEXTS with a bi-encoder
+        (cosine > threshold = duplicate) — data-free, the right choice at a few examples
+        per class. Any object with ``.filter(candidates, against, seen)`` also works.
+    dedup_threshold : float
+        Rejection threshold for the chosen backend (|Pearson| for covariance, cosine for
+        sts; ~0.9 is a sensible sts value).
+
+    Attributes
+    ----------
+    hypotheses_ : list[str]
+        The fitted hypothesis set (the feature vocabulary).
+    evolution_history_ : list[dict]
+        Present after ``fit`` with ``evolve=True``: one dict per round with the exact
+        ``pool`` scored that round and its ``heldout_acc`` — every round is recoverable.
 
     Notes
     -----
@@ -89,7 +106,8 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         class_names=None,
         n_hypotheses=64,
         lm="openrouter/deepseek/deepseek-v4-flash",
-        dedup_corr=0.95,
+        dedup="covariance",
+        dedup_threshold=0.95,
         evolve=False,
         random_state=0,
     ):
@@ -107,7 +125,8 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         self.class_names = class_names
         self.n_hypotheses = n_hypotheses
         self.lm = lm
-        self.dedup_corr = dedup_corr
+        self.dedup = dedup
+        self.dedup_threshold = dedup_threshold
         self.evolve = evolve
         self.random_state = random_state
 
@@ -123,17 +142,23 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
         tags.target_tags.required = False
         return tags
 
-    def fit(self, X=None, y=None):
+    def fit(self, X=None, y=None, baseline_features=None):
         """Fix the hypothesis set. If `hypotheses` was given it is used as-is (pure transformer,
         no LM — X/y ignored). If not, the hypotheses are GENERATED from (X, y) via the LM proposer,
-        which requires the `train` extras (dspy); `task` and `class_definitions` must be set."""
+        which requires the `train` extra; `task` and `class_definitions` must be set.
+
+        `baseline_features` (n_samples, d), optional: any extra feature block the downstream head
+        will ALSO see — other tabular columns, TF-IDF, embeddings. With ``evolve=True`` the
+        hypotheses are then pruned by their MARGINAL value over these fixed columns, so the pool
+        keeps only what the baseline can't carry. (In a Pipeline, route it as
+        ``pipe.fit(X, y, hyp__baseline_features=Z)``.)"""
         if self.score_mode not in _SCORE_MODES:
             raise ValueError(f"score_mode must be one of {_SCORE_MODES}, got {self.score_mode!r}")
         if self.hypotheses:
             self.hypotheses_ = list(self.hypotheses)
             self._scorer = None  # lazy; built on first transform
         else:
-            self.hypotheses_ = self._generate(X, y)  # builds self._scorer (reused by dedup)
+            self.hypotheses_ = self._generate(X, y, baseline_features)  # builds self._scorer
             if not self.hypotheses_:
                 raise ValueError("hypothesis generation produced an empty pool")
         return self
@@ -197,11 +222,11 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
 
     # -- generation (training side; needs the `train` extras) ----------------
 
-    def _generate(self, X, y) -> list[str]:
+    def _generate(self, X, y, baseline_features=None) -> list[str]:
         if X is None or y is None:
             raise ValueError(
                 "No `hypotheses` given: call fit(X, y) with texts+labels to generate them "
-                "(needs the `train` extras), or pass hypotheses=... / use from_run()."
+                "(needs the `train` extra), or pass hypotheses=... / use from_run()."
             )
         if not self.task or not self.class_definitions:
             raise ValueError("Generating hypotheses requires `task` and `class_definitions`.")
@@ -212,17 +237,22 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
                 'Generating hypotheses needs the training dependencies: pip install "nli-boost[train]".'
             ) from e
         from .config import LMConfig
-        from .data import labeled_examples, stratified_indices
-        from .dedup import Deduper
+        from .data import labeled_examples
 
         texts = self._coerce_texts(X)
         y = np.asarray(y)
+        if baseline_features is not None:
+            baseline_features = np.asarray(baseline_features, dtype=np.float64)
+            if baseline_features.ndim != 2 or baseline_features.shape[0] != len(texts):
+                raise ValueError(
+                    f"baseline_features must be (n_samples, d) aligned with X; "
+                    f"got {baseline_features.shape} for {len(texts)} texts"
+                )
         names = self.class_names or [f"class {c}" for c in range(int(y.max()) + 1)]
         rng = np.random.default_rng(self.random_state)
         examples = labeled_examples(texts, y, names, per_class=3, rng=rng)
-        ref_idx = stratified_indices(y, min(400, len(texts)), rng)  # dedup correlates on this sample
         scorer = self._get_scorer()
-        deduper = Deduper(scorer, [texts[int(i)] for i in ref_idx], self.dedup_corr)
+        deduper = self._make_deduper(texts, y, rng)
         proposer = Proposer(LMConfig(model=self.lm), CostTracker())
         pool = generate_pool(
             proposer, deduper, self.task, self.class_definitions, examples, self.n_hypotheses
@@ -241,7 +271,7 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
                 y_train=y,
                 n_classes=len(names),
             )
-            pool, _history = evolve_pool(
+            pool, self.evolution_history_ = evolve_pool(
                 bundle,
                 pool,
                 scorer,
@@ -249,8 +279,27 @@ class HypothesisVectorizer(BaseEstimator, TransformerMixin):
                 deduper,
                 PoolConfig(size=self.n_hypotheses),
                 seed=self.random_state,
+                baseline_train=baseline_features,
             )
         return pool
+
+    def _make_deduper(self, texts, y, rng):
+        """Dedup backend: 'covariance' (behavioral, needs data), 'sts' (text-similarity,
+        data-free — the low-data choice), or any object with a .filter(candidates, against,
+        seen) method."""
+        if hasattr(self.dedup, "filter"):
+            return self.dedup
+        if self.dedup == "sts":
+            from .dedup import STSDeduper
+
+            return STSDeduper(threshold=self.dedup_threshold, device=self.device)
+        if self.dedup == "covariance":
+            from .data import stratified_indices
+            from .dedup import Deduper
+
+            ref_idx = stratified_indices(y, min(400, len(texts)), rng)  # correlate on this sample
+            return Deduper(self._get_scorer(), [texts[int(i)] for i in ref_idx], self.dedup_threshold)
+        raise ValueError(f"dedup must be 'covariance', 'sts', or a deduper object; got {self.dedup!r}")
 
     # -- persistence & config -----------------------------------------------
 

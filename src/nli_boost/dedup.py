@@ -29,6 +29,20 @@ def _zscore(col: np.ndarray) -> np.ndarray:
     return c / s if s > 1e-9 else np.zeros_like(c)
 
 
+def _exact_text_pass(candidates: list[str], seen: set[str]) -> tuple[list[str], list[str]]:
+    """First pass, free: drop empty/already-seen/intra-batch textual duplicates.
+    Returns (unique candidates, rejected)."""
+    rejected, uniq, batch = [], [], set()
+    for c in candidates:
+        key = norm_statement(c)
+        if not key or key in seen or key in batch:
+            rejected.append(c)
+        else:
+            batch.add(key)
+            uniq.append(c)
+    return uniq, rejected
+
+
 class Deduper:
     def __init__(self, scorer, ref_texts: list[str], corr_threshold: float = 0.95):
         self.scorer = scorer
@@ -48,14 +62,7 @@ class Deduper:
         """Returns (kept, rejected). Mutates `seen` with kept normalized forms. A candidate is
         rejected if its entailment vector is ~collinear with a kept feature (in `against` or an
         earlier keep this batch)."""
-        rejected, uniq, batch = [], [], set()
-        for c in candidates:  # exact-text pass first (free); catches cross-batch and intra-batch
-            key = norm_statement(c)
-            if not key or key in seen or key in batch:
-                rejected.append(c)
-            else:
-                batch.add(key)
-                uniq.append(c)
+        uniq, rejected = _exact_text_pass(candidates, seen)
         if not uniq:
             return [], rejected
 
@@ -71,5 +78,50 @@ class Deduper:
             else:
                 seen.add(norm_statement(c))  # only KEPT enter persistent seen
                 cols.append(v)
+                kept.append(c)
+        return kept, rejected
+
+
+class STSDeduper:
+    """Text-similarity dedup for LOW-DATA settings. With only a few examples per class the
+    covariance estimate over score vectors is noise (it would keep/reject at random), so
+    near-duplicates are caught in TEXT space instead: embed the hypotheses with a bi-encoder
+    and reject a candidate whose cosine similarity to a kept one exceeds `threshold`.
+    Data-free — needs no reference texts. Same .filter contract as Deduper."""
+
+    def __init__(
+        self,
+        model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        threshold: float = 0.9,
+        device: str | None = None,
+    ):
+        self.model_name = model
+        self.thr = threshold
+        self.device = device
+        self._model = None  # lazy
+
+    def _embed(self, texts: list[str]) -> np.ndarray:
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+
+            self._model = SentenceTransformer(self.model_name, device=self.device)
+        return np.asarray(self._model.encode(texts, normalize_embeddings=True, show_progress_bar=False))
+
+    def filter(
+        self, candidates: list[str], against: list[str], seen: set[str]
+    ) -> tuple[list[str], list[str]]:
+        uniq, rejected = _exact_text_pass(candidates, seen)
+        if not uniq:
+            return [], rejected
+
+        kept_vecs = [v for v in self._embed(list(against))] if against else []
+        kept = []
+        for c, v in zip(uniq, self._embed(uniq)):
+            sim = max((float(v @ k) for k in kept_vecs), default=0.0)  # cosine (normalized)
+            if sim > self.thr:
+                rejected.append(f"{c} (sts {sim:.2f} with a kept hypothesis)")
+            else:
+                seen.add(norm_statement(c))
+                kept_vecs.append(v)
                 kept.append(c)
         return kept, rejected
