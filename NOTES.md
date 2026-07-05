@@ -93,6 +93,27 @@ Two fixes committed as a result:
    run also carries the improved judge feedback, so a clean teacher ablation would re-run deepseek
    under the new feedback too; deferring that unless GLM's result is ambiguous.
 
+### 2026-07-04 — FINAL GEPA verdict: instruction tuning delivered NO value (clean A/B)
+
+Completed the missing cell. Full -l A/B on TREC (metrics.json headline):
+| run | proposer + instruction | acc | F1 |
+|---|---|---|---|
+| trec_baseline_l | flash + HAND-WRITTEN | **0.952** | 0.939 |
+| trec_pro_l | pro + hand-written | 0.946 | 0.925 |
+| trec_tuned_l | flash + GEPA-tuned | 0.946 | 0.924 |
+
+McNemar (compare tool, fresh refits):
+- **Clean instruction A/B (same flash proposer): tuned 0.948 vs hand-written 0.958, p=0.36** — not
+  significant, trending SLIGHTLY WORSE. The GEPA-tuned instruction did not beat the hand-written one.
+- flash vs pro (hand-written): 0.946 vs 0.958, p=0.21 — equivalent (proposer model not a lever; cf #46).
+- **Definitive close of the GEPA arc:** instruction tuning = no benefit (equivalent/slightly worse),
+  proposer model = no benefit, ENCODER = the only significant lever (-m→-l +5pts, p=0.024). The simple
+  hand-written prompt + cheap flash + bigger encoder is the winning config. Tuned instruction NOT
+  adopted. Value delivered by the effort: a reusable, audited instruction-tuning loop + the McNemar
+  `compare` tool + the covariance dedup — methodology, not scoreboard.
+- Next real lever (from the 2402.12368 review): a better-GENERALIZING frozen encoder (domain+length
+  robust) for the OOD/long-text weakness (20newsgroups), not more instruction/proposer work.
+
 ### 2026-07-04 — hourly: cleaning up the instruction A/B (flash+baseline+-l — the missing cell)
 
 The GEPA verdict rests on an incomplete A/B. We have: flash+tuned+-l 0.946, pro+baseline+-l 0.946,
