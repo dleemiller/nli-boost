@@ -1469,3 +1469,13 @@ what they replaced. So a good-but-unlucky feature gets swapped for a worse refil
 regression, not bad luck. Fix (Lee's design, next commit): grow-then-select — generate refills, MERGE
 to ~2x (128), then importance+covariance PRUNE back to 64; a refill enters only if it out-ranks an
 incumbent. Plus a strict accept gate (revert if the new pool regresses beyond noise) => monotonic.
+
+## 2026-07-04 (hourly) — trec_growselect_l RUNNING: grow-then-select is MONOTONE (early)
+
+New evolve (commit 785e051) first run, healthy (WAL fresh, 358% CPU, round 1/10). Pre-registered
+expectation: (1) held-out monotone across rounds (no post-peak dip — accept gate), (2) test acc holds
+or beats old-evolve best_l_max 0.964. Early evidence for (1) CONFIRMED: round0 0.9114 ->merge 0.9164
+(accepted); round1 0.9164 ->merge 0.9176 (accepted). Monotone, vs old-evolve best_l_max which dipped
+(0.9114->0.9151->0.9139 at round2). Consistency check holds: round1 entry heldout (0.9164) == round0
+merged_acc, confirming accept-gate CV matches next-round ranking CV. Refills 64->60 (dedup trimming as
+seen grows). Verdict on (2) deferred to completion (McNemar vs best_l_max). No new job launched.
