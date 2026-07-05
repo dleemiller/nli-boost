@@ -1822,3 +1822,14 @@ are STALE (trec -m 0.920 predates the answer-oriented instruction that hit 0.934
 current instruction+dedup AND the test-split fix changed their subset) -> marked "*re-run*"
 placeholders; only the current -l TREC numbers + low-N kept. TREC baselines valid (all-500 test
 unchanged); ag_news/sst2 baselines placeholdered.
+
+## 2026-07-05 (hourly) — CFPB monetary-relief run in flight (first tabular+text datapoint)
+
+examples/cfpb.py, balanced 1k/class (2k, random stratified split — temporal would shift balance),
+static pool, -l, ColumnTransformer(narrative->HypothesisVectorizer + one-hot Product/Company/State/
+channel), tabular passed as baseline_features. Healthy at ~10min (WAL fresh); slower generation than
+TREC — covariance dedup rejects many similar complaint hypotheses -> multiple generate attempts + LM
+latency. Then ~128k-pair train+test scoring at -l ahead. EXPECTATION: this is a discrimination
+datapoint (balanced/random split), NOT the temporal-natural-rate benchmark (AUC 0.78 hybrid / 0.69
+tfidf) — so not directly comparable; want AUC comfortably >0.5 and beating a tfidf+tabular baseline to
+show the narrative hypotheses add signal. Verdict on completion. No new job launched (run in flight).
