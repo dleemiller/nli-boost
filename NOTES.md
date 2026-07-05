@@ -1575,3 +1575,31 @@ Updated recommendation for Lee:
   blind-swap (a) whose churn regularized to 0.964. On TREC these are all within noise of each other.
 - The real test of any fix is a dataset with genuine evolution headroom (20ng / ag_news), NOT TREC.
 No code changed, CPU-only cached analysis (no GPU, Lee's training untouched).
+
+## 2026-07-05 (hourly) — PRE-REGISTER: generation-time variance check (vacuous hypotheses)
+
+Decision-INDEPENDENT of the evolve a/b/c question. Vacuous/always-true hyps (near-constant entail
+across texts, e.g. "The text is a question." on TREC) carry zero discriminative signal but PASS
+covariance dedup (a constant z-scores to zeros -> corr 0 with everything, never rejected). They then
+occupy pool slots (= cross-encoder forward passes at inference) until evolution's _failure_reason
+prunes them. Question: what fraction of a freshly-generated pool is vacuous? EXPECTATION: if a
+non-trivial fraction (>~5%) have entail-std < 0.02 on train, a cheap generation-time variance filter
+(drop near-constant entail vectors as candidates are scored for dedup) removes dead weight earlier —
+saving inference cost with no accuracy loss (they'd be pruned anyway). Test on cached growselect
+round-0 pool (initial 64, already scored on train). CPU/cache only.
+
+## 2026-07-05 (hourly) — RESULT: generation-time variance filter NOT worth it (2% vacuous)
+
+Checked initial generated pool (growselect round-0, 64 hyps, cached): entail-std min 0.0057 / median
+0.3297 / max 0.4483. Vacuous (std<0.02): **1/64 = 2%** ("The text asks for a phone number or age.",
+mean 0.001), and evolution pruned it (0 vacuous survived to shipped pool). Below the pre-registered
+~5% bar -> a generation-time variance filter saves ~1 hyp, not worth the code. LM + covariance dedup
+already yield discriminative hyps. Backlog item "generation-time variance check / drop always-true
+statements" -> CLOSED, no deficiency to target. No code change.
+
+STATE OF PROJECT: cheap cached analyses are now exhausted. Remaining backlog needs either (a) Lee's
+evolve a/b/c decision [grow-then-select overfits on TREC via selection artifact; option (b)
+independent held-out validated as the fix but signal weak on TREC], or (b) a full run on a
+HEADROOM dataset (20newsgroups/ag_news) where evolution can actually matter — TREC -l is saturated
+(round 0-1 already ~0.95, rest is noise). No further cheap TREC diagnostics remain. Idle; awaiting a
+direction from Lee.
