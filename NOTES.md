@@ -1285,3 +1285,12 @@ All four within the ~0.5-1pt noise floor (McNemar p>0.2 across cells). Neither p
 instruction tuning is a lever at -l. Lexical suppression (13->1 wh-word hyps in tuned pools) is real
 in COMPOSITION but costs ~0 ACCURACY at -l (encoder absorbs it via semantic paraphrases; would more
 likely bite at -m, untested). trec_cov_l (covariance deduper, from scratch) running next.
+
+### 2026-07-04 — covariance deduper validated (= STS), STS dependency dropped
+
+trec_cov_l (covariance dedup, from scratch) 0.950/F1 0.929 vs trec_baseline_l (STS dedup, identical
+else) 0.952/F1 0.939. McNemar 0.948 vs 0.958, delta -0.010, p=0.27 -> not significant / equivalent.
+Covariance (feature-space) dedup matches STS at no accuracy cost, in the correct space, and drops a
+model dependency (ModernCE-STS). Swap validated end-to-end.
+Now running: trec_tuned_l_lex (tuned instruction + TF-IDF channel) — tests if restoring lexical
+signal recovers the tuned pool's small gap (tuned 0.946 vs hand-written 0.952).
