@@ -31,9 +31,12 @@ _CHUNK = 500  # sqlite bound-variable limit safety
 
 class ScoreCache:
     def __init__(self, path: str | Path):
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(path, check_same_thread=False)
+        if str(path) == ":memory:":  # ephemeral in-process cache (HypothesisVectorizer default)
+            self._conn = sqlite3.connect(":memory:", check_same_thread=False)
+        else:
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self._conn = sqlite3.connect(path, check_same_thread=False)
         self._lock = threading.Lock()
         self._conn.executescript(_SCHEMA)
         self._conn.commit()

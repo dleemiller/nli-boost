@@ -6,4 +6,8 @@ classical head. See METHOD.md for the full process and the measurements
 behind each design choice.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
+
+from .vectorizer import HypothesisVectorizer  # dspy-free inference entry point
+
+__all__ = ["HypothesisVectorizer"]

@@ -4,19 +4,14 @@ version = "0.1.0"
 description = "Interpretable text classifiers from LLM-proposed NLI hypotheses: decision trees and gradient boosting with natural-language splits"
 readme = "README.md"
 requires-python = ">=3.11"
+# Inference core: HypothesisVectorizer needs only the encoder + sklearn. No LM/dspy.
 dependencies = [
-    "datasets>=5.0.0",
-    "dspy>=3.2.1",
     "numpy>=2.4.6",
     "pydantic>=2.13.4",
-    "python-dotenv>=1.2.2",
     "pyyaml>=6.0.3",
-    "rich>=15.0.0",
     "scikit-learn>=1.9.0",
     "sentence-transformers>=5.6.0",
     "torch>=2.12.1",
-    "typer>=0.26.8",
-    "wordllama>=0.4.0.post1",
 ]
 
 [project.scripts]
@@ -28,6 +23,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nli_boost"]
+
+[tool.uv]
+# Training deps live in the `train` group, not `dependencies`, so `pip install nli-boost`
+# stays inference-only (no dspy). default-groups installs them here for dev/test.
+default-groups = ["dev", "train"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -41,4 +41,12 @@ dev = [
     "pre-commit>=4.6.0",
     "pytest>=9.1.1",
     "ruff>=0.15.20",
+]
+# Hypothesis generation/evolution (LM), dataset loading, and the CLI. Not needed for inference.
+train = [
+    "datasets>=5.0.0",
+    "dspy>=3.2.1",
+    "python-dotenv>=1.2.2",
+    "rich>=15.0.0",
+    "typer>=0.26.8",
 ]

@@ -1258,19 +1258,13 @@ name = "nli-boost"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "datasets" },
-    { name = "dspy" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pydantic" },
-    { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "rich" },
     { name = "scikit-learn" },
     { name = "sentence-transformers" },
     { name = "torch" },
-    { name = "typer" },
-    { name = "wordllama" },
 ]
 
 [package.dev-dependencies]
@@ -1279,21 +1273,22 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+train = [
+    { name = "datasets" },
+    { name = "dspy" },
+    { name = "python-dotenv" },
+    { name = "rich" },
+    { name = "typer" },
+]
 
 [package.metadata]
 requires-dist = [
-    { name = "datasets", specifier = ">=5.0.0" },
-    { name = "dspy", specifier = ">=3.2.1" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "pydantic", specifier = ">=2.13.4" },
-    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "rich", specifier = ">=15.0.0" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
     { name = "sentence-transformers", specifier = ">=5.6.0" },
     { name = "torch", specifier = ">=2.12.1" },
-    { name = "typer", specifier = ">=0.26.8" },
-    { name = "wordllama", specifier = ">=0.4.0.post1" },
 ]
 
 [package.metadata.requires-dev]
@@ -1301,6 +1296,13 @@ dev = [
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.15.20" },
+]
+train = [
+    { name = "datasets", specifier = ">=5.0.0" },
+    { name = "dspy", specifier = ">=3.2.1" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "rich", specifier = ">=15.0.0" },
+    { name = "typer", specifier = ">=0.26.8" },
 ]
 
 [[package]]
@@ -2858,15 +2860,6 @@ wheels = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.10.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f", size = 22253, upload-time = "2020-11-01T01:40:22.204Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b", size = 16588, upload-time = "2020-11-01T01:40:20.672Z" },
-]
-
-[[package]]
 name = "torch"
 version = "2.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3039,35 +3032,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f1/a5/81f987504738e6defeed61ec1c47e2aefab3c35d8eeb87e1b3f38cf28254/virtualenv-21.5.1.tar.gz", hash = "sha256:dca3bf98275a59c652b69d68e73433e597d977c2da9198882479d1a7188009c8", size = 4578798, upload-time = "2026-06-16T16:23:58.603Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/02/3623e6169bed617ed1e2d372f7c69f92ec28d54c4dfc997055c8578ec148/virtualenv-21.5.1-py3-none-any.whl", hash = "sha256:55aa670b67bbfb991b03fda39bd3276d92c419d702376e98c5df1c9989a26783", size = 4558820, upload-time = "2026-06-16T16:23:56.963Z" },
-]
-
-[[package]]
-name = "wordllama"
-version = "0.4.0.post1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "pydantic" },
-    { name = "requests" },
-    { name = "safetensors" },
-    { name = "tokenizers" },
-    { name = "toml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/c2/0592e33f12045f26a5cc5a5618aef028428dae6d4cc8d3900bbfba7ecc47/wordllama-0.4.0.post1.tar.gz", hash = "sha256:133664bc6fd0c73c8a4350b075419329708ee1f17a21ee4bd3ee47b3b0a83bb5", size = 18182174, upload-time = "2025-12-01T21:33:40.547Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/77/432e1d3faf134de7e89084bd3c76dba14ce5d3a1fc57db616f37edd93529/wordllama-0.4.0.post1-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:f1b7624637d51373d9d17ea91ead3e29458b41de261531e5f438a166fbfb72d2", size = 17312113, upload-time = "2025-12-01T21:33:07.555Z" },
-    { url = "https://files.pythonhosted.org/packages/da/6b/f812d189aeebf56ea3776b4fd4a8f31f22786c65f8365f2d80b6c44e7c85/wordllama-0.4.0.post1-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:d3a6d341602ca64f0469d7eb6494b859654966024369caa60d60edf2683edd47", size = 17171704, upload-time = "2025-12-01T21:33:09.483Z" },
-    { url = "https://files.pythonhosted.org/packages/8e/68/c449826f8b8ba8cea65f2efc05b049c155e00dd3f17b6454ffbd9ba6652a/wordllama-0.4.0.post1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:42c2c88907ace0b0681ac6f9092d6a300a6409a5d2d61071a3fb5e7159370c97", size = 19155170, upload-time = "2025-12-01T21:33:11.421Z" },
-    { url = "https://files.pythonhosted.org/packages/df/c1/5a39e0fea62aa9e0d2b7f3792899e38cf015b53b12376edd4ba480d923ab/wordllama-0.4.0.post1-cp311-cp311-win_amd64.whl", hash = "sha256:5df4b76c98f376abd6c1a0bfd4474b816cbdad9d9b7df93d80ca485308456619", size = 16107164, upload-time = "2025-12-01T21:33:13.55Z" },
-    { url = "https://files.pythonhosted.org/packages/62/5c/3871c6b8942f0a93085d7baeff2fbe1a09d82cc780f67f4ef15943ef192e/wordllama-0.4.0.post1-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:ae87b076994c5f5328707ea30e334d7407a6ca4c54718603a4455bb7faf0c52e", size = 17318513, upload-time = "2025-12-01T21:33:15.314Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/b3/40dfda0d87f1899d8ab6647d0e48ed99fe8d48664015fd75f5316f18f5ec/wordllama-0.4.0.post1-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:cffd910fc9af41dfe19339b5a53301ecc2a8fc66355dac21b28d150142201311", size = 17172516, upload-time = "2025-12-01T21:33:17.503Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/01/b7f3d70ad44c1c7d35914f0db93893882ce0f5e2cb7341215dc89a153cfa/wordllama-0.4.0.post1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:2dc004ed04438e4a9ce263ef69b1d7dcc5099da7277e08ddedfd35810428ba31", size = 19089827, upload-time = "2025-12-01T21:33:19.924Z" },
-    { url = "https://files.pythonhosted.org/packages/8b/44/c7362e3547b20b3c1fa0f5ee12c941f2147b285fdde589a8498931900f80/wordllama-0.4.0.post1-cp312-cp312-win_amd64.whl", hash = "sha256:e146b8b56d044eda4a50576c2703c140d91f1b0124c80a7321fda684281e4cda", size = 16105891, upload-time = "2025-12-01T21:33:22.249Z" },
-    { url = "https://files.pythonhosted.org/packages/54/69/50754bbeea84f22944d85bbda9e463c47c1b5517a07a0b8641a465324df2/wordllama-0.4.0.post1-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:aef9952c3f3efe2f3ac097f928309997607813ec7dab3c1916a46c5e2f74f60c", size = 17332088, upload-time = "2025-12-01T21:33:24.828Z" },
-    { url = "https://files.pythonhosted.org/packages/70/93/a74419b6d59a14d41cfe3455d1110982f7e801d949f73dd7303d71180983/wordllama-0.4.0.post1-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:1ecb60e15b568d794003bc35e49cd6f09d1bd5f49df8bee38e147cbbfe7bcbf6", size = 17174303, upload-time = "2025-12-01T21:33:27.081Z" },
-    { url = "https://files.pythonhosted.org/packages/bc/3d/4917a64f871b1c7404ff62653cac905279b6c422986720e98ff58c654342/wordllama-0.4.0.post1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:c78466f0600550742b37eb9f8212cac1e548632f41bfc1f6c828b5726332b49e", size = 19076345, upload-time = "2025-12-01T21:33:28.916Z" },
-    { url = "https://files.pythonhosted.org/packages/d3/15/b8cb0edfccbd7ef7898d3742e296ada51c9b944ef9bf0d6f41208068a605/wordllama-0.4.0.post1-cp313-cp313-win_amd64.whl", hash = "sha256:ff050dc1a036785c8b3fbb1128eaf6ae98222437657bed58aea06a14feb416de", size = 16104615, upload-time = "2025-12-01T21:33:30.846Z" },
 ]
 
 [[package]]

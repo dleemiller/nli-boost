@@ -59,7 +59,7 @@ class PoolConfig(BaseModel):
 class LexicalConfig(BaseModel):
     """Optional static lexical channel concatenated with hypothesis features."""
 
-    kind: Literal["none", "tfidf_svd", "wordllama"] = "none"
+    kind: Literal["none", "tfidf_svd"] = "none"
     dims: int = 128
 
 
