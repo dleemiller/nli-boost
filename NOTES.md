@@ -1294,3 +1294,26 @@ Covariance (feature-space) dedup matches STS at no accuracy cost, in the correct
 model dependency (ModernCE-STS). Swap validated end-to-end.
 Now running: trec_tuned_l_lex (tuned instruction + TF-IDF channel) — tests if restoring lexical
 signal recovers the tuned pool's small gap (tuned 0.946 vs hand-written 0.952).
+
+### 2026-07-04 — blind-spot hunt: a NEW hypothesis STYLE (answer-imperative), + an intrinsic ceiling
+
+Diagnosed trec_baseline_l. Only hard confusion: ENTY->DESC (7 errors, best-separator AUC 0.84; all
+other pairs >0.97). Confused cases are ambiguous "What is X?/What is X made of?" (question reads DESC,
+gold answer is an entity). Tested candidate hypotheses in styles we DON'T use, scored at -l on the
+ENTY/DESC subset (AUC vs the 0.84 current best; distinctness = max |corr| with pool):
+- paraphrase->imperative "equivalent to asking someone to EXPLAIN/DEFINE X": AUC 0.842, corr 0.71 (distinct)
+- contrastive answer-type "a thing, not a description": 0.784, corr 0.48
+- answer-length "answerable in a few words": 0.748, corr 0.27 (very distinct)
+- content "made of/composed": 0.608 ; "nameable thing": 0.525  (encoder can't ground these)
+
+Findings:
+1. ENTY/DESC is an INTRINSIC ceiling — no style (old or new) beats ~0.84; genuine label ambiguity,
+   not a coverage gap. Don't expect to fix it with better hypotheses.
+2. Real blind-spot STYLE: every pool hypothesis describes the QUESTION (intent/lexical/topic); NONE
+   describes the ANSWER's form or reduces the question to its imperative. "answer-imperative"
+   (equivalent to 'Name X' / 'Explain X' / 'Locate X') and "answer-length/form" are new, DISTINCT,
+   competitive features -> worth adding to the GeneratePool instruction as an explicit angle.
+3. Encoder grounds ABSTRACT answer-type framings (explain-vs-name) >> concrete compositional ones
+   (made-of) -> instruction should steer to answer-imperative, not compositional, framing.
+Proposed instruction addition: an angle "what a valid ANSWER looks like — reduce the question to its
+imperative (Name/Explain/Define/Locate/Count X) and to the answer's form (a short name vs a sentence)".
