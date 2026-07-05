@@ -1479,3 +1479,28 @@ or beats old-evolve best_l_max 0.964. Early evidence for (1) CONFIRMED: round0 0
 (0.9114->0.9151->0.9139 at round2). Consistency check holds: round1 entry heldout (0.9164) == round0
 merged_acc, confirming accept-gate CV matches next-round ranking CV. Refills 64->60 (dedup trimming as
 seen grows). Verdict on (2) deferred to completion (McNemar vs best_l_max). No new job launched.
+
+## 2026-07-04 — trec_growselect_l VERDICT: grow-then-select OVERFITS held-out (significant, negative)
+
+Pre-registered: (1) monotone held-out, (2) test holds/beats best_l_max 0.964.
+(1) CONFIRMED — textbook monotone with 5 reverts: 0.9114->0.9164->0.9176->0.9226->0.9276->0.9313
+(rounds 3,5,7,8,9 REVERTED by the accept gate; shipped round-7 peak checkpoint 0.9313). Mechanism
+works exactly as designed.
+(2) FAILED, significantly. TEST **0.948** vs best_l_max **0.964**, McNemar **p=0.0215**, discordant
+9-to-1 in best_l_max's favor. Held-out went UP 1.1pt, test went DOWN 1.6pt.
+
+Diagnosis: grow-then-select (merge 128 -> select top-64 by CV importance, accept gate, ship max-heldout
+checkpoint) is a much STRONGER optimizer of the held-out estimate — which is CV on the rank_sample(800)
+subsample, a NOISY PROXY. Optimizing it hard overfits it -> test generalization drops. Pool is clean
+(6 legit surface hyps, no reward-hacking), so this is statistical selection-overfitting, not bad
+hypotheses. Corollary: the OLD blind-swap evolve's churn/"regression" that Lee flagged was acting as
+IMPLICIT REGULARIZATION — its noise prevented overfitting the CV folds (it shipped a 0.9164-heldout
+pool that tested 0.964). Even checkpoint-best is implicated: shipping the MAX-heldout pool ships the
+most-overfit one; best_l_max got 0.964 partly BY shipping its non-peak last pool.
+
+DECISION FOR LEE (not auto-reverting — you designed this): grow-then-select is committed as default
+(785e051) but hurts test on this seed. Options: (a) revert evolve to blind-swap (regularized, 0.964);
+(b) keep grow-then-select but fix the proxy — accept gate / selection on a SEPARATE held-out not used
+for ranking (nested CV), bigger rank_sample, or lighter selection pressure; (c) keep checkpoint+evolve
+but drop checkpoint-best (ship last, not peak) to reduce overfit. Caveat: single seed; a 2-3 seed
+confirm would harden the conclusion before reverting. No code reverted, no new run launched (cron).
