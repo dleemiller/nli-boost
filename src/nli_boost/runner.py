@@ -68,9 +68,19 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
     else:
         _phase(f"generating pool of {cfg.pool.size}")
         pool = _generate_pool(bundle, proposer, deduper, cfg.pool.size, rng)
-        # STAGE 2 — evolve
+        # STAGE 2 — evolve. If a lexical channel is configured, fit it on train and pass it as a
+        # fixed baseline so NLI hypotheses are pruned by MARGINAL value over the cheap TF-IDF
+        # features — redundant-with-lexical hypotheses die, shrinking the per-inference NLI pool.
+        lex_train = None
+        if cfg.lexical.kind != "none":
+            from .lexical import LexicalFeaturizer
+
+            feat = LexicalFeaturizer(cfg.lexical, cfg.seed).fit(bundle.train_texts)
+            lex_train = feat.transform(bundle.train_texts)
         _phase(f"evolving (cap {cfg.pool.rounds} rounds, patience {cfg.pool.patience})")
-        pool, history = evolve(bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed)
+        pool, history = evolve(
+            bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, lex_train=lex_train
+        )
 
     # STAGE 3 — CV-selected head on the full train split; the optional lexical
     # channel (fit on TRAIN ONLY) is concatenated here and only here

@@ -44,21 +44,35 @@ class Ranking:
     _n: int = 0
 
 
-def rank_hypotheses(x: np.ndarray, y: np.ndarray, m: int, seed: int, folds: int = 4) -> Ranking:
-    """x is the (n, 2m) feature matrix; every sample is held out in exactly one fold."""
-    imps = np.zeros((folds, x.shape[1]))
+def rank_hypotheses(
+    x: np.ndarray, y: np.ndarray, m: int, seed: int, folds: int = 4, lex: np.ndarray | None = None
+) -> Ranking:
+    """x is the (n, 2m) NLI feature matrix; every sample is held out in exactly one fold.
+
+    `lex` (n, d), if given, is the cheap lexical channel as a FIXED baseline: it joins every
+    fold's model and drives the errors/hot spots, but is never ranked or pruned. Each NLI
+    hypothesis's importance then measures its MARGINAL value ON TOP OF lexical — a hypothesis
+    whose signal TF-IDF already carries scores ~0 and dies. Since an NLI feature costs a
+    cross-encoder forward pass at inference and TF-IDF is ~free, this minimizes the NLI pool
+    (and thus per-prediction cost) down to hypotheses that add semantics lexical cannot."""
+    xx = x if lex is None else np.concatenate([x, lex], axis=1)
+    imps = np.zeros((folds, xx.shape[1]))
     errors: list[tuple[int, int]] = []
     skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
-    for f, (itr, ihe) in enumerate(skf.split(x, y)):
+    for f, (itr, ihe) in enumerate(skf.split(xx, y)):
         clf = HistGradientBoostingClassifier(max_iter=100, random_state=seed)
-        clf.fit(x[itr], y[itr])
-        imps[f] = permutation_importance(clf, x[ihe], y[ihe], n_repeats=3, random_state=seed).importances_mean
-        preds = clf.predict(x[ihe])
+        clf.fit(xx[itr], y[itr])
+        imps[f] = permutation_importance(
+            clf, xx[ihe], y[ihe], n_repeats=3, random_state=seed
+        ).importances_mean
+        preds = clf.predict(xx[ihe])
         errors += [(int(i), int(p)) for i, p in zip(ihe, preds) if p != y[i]]
 
+    # rank/prune only the NLI columns (first 2m: [entail | contradict]); lexical columns are baseline
     col_stability = (imps > 0).mean(axis=0)
-    hyp_importance = imps.mean(axis=0)[:m] + imps.mean(axis=0)[m:]
-    hyp_stability = np.maximum(col_stability[:m], col_stability[m:])
+    mean_imp = imps.mean(axis=0)
+    hyp_importance = mean_imp[:m] + mean_imp[m : 2 * m]
+    hyp_stability = np.maximum(col_stability[:m], col_stability[m : 2 * m])
     order = np.lexsort((-hyp_stability, -hyp_importance))
     r = Ranking(order=order, importance=hyp_importance, stability=hyp_stability, errors=errors)
     r._n = len(y)
@@ -186,9 +200,15 @@ def evolve(
     deduper: Deduper,
     cfg: PoolConfig,
     seed: int,
+    lex_train: np.ndarray | None = None,
 ) -> tuple[list[str], list[dict]]:
     """Returns (final pool, per-round history). History is the audit trail:
-    every prune with its reason, every refill with its later target-AUC."""
+    every prune with its reason, every refill with its later target-AUC.
+
+    `lex_train` (n_train, d), if given, is the lexical channel over ALL train texts; the
+    ranking sees it as a fixed baseline so NLI hypotheses are pruned by MARGINAL value over
+    lexical (redundant-with-TF-IDF hypotheses die), and refill targets the confusions lexical
+    leaves behind."""
     rng = np.random.default_rng(seed)
     if cfg.rank_sample and cfg.rank_sample < len(bundle.train_texts):
         sub = stratified_indices(bundle.y_train, cfg.rank_sample, rng)
@@ -196,6 +216,7 @@ def evolve(
         sub = np.arange(len(bundle.train_texts))
     sub_texts = [bundle.train_texts[i] for i in sub]
     sub_y = bundle.y_train[sub]
+    lex_sub = lex_train[sub] if lex_train is not None else None
     examples = labeled_examples(bundle, per_class=3, rng=rng)
 
     seen = {s.casefold() for s in pool}
@@ -209,7 +230,7 @@ def evolve(
         x = scorer.features(sub_texts, pool)
         # fixed fold seed across rounds: the plateau check compares round-over-round
         # held-out accuracy, which is only meaningful on the SAME fold splits
-        ranking = rank_hypotheses(x, sub_y, m, seed)
+        ranking = rank_hypotheses(x, sub_y, m, seed, lex=lex_sub)
 
         # instrumentation: did last round's refills hit their assigned hot spot?
         refill_aucs: list[float] = []

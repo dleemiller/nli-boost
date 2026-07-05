@@ -1,0 +1,11 @@
+# Best method at -l with a longer leash: same method as trec_best_l (code-default answer-oriented
+# instruction + covariance dedup + flash), pool KEPT at 64, but up to 10 evolution rounds (patience 4
+# so the extra rounds are actually used), PLUS the TF-IDF lexical channel concatenated to the NLI
+# features. Tests whether more evolution + lexical signal breaks above the saturated -l band
+# (~0.95; trec_best_l 0.954, tuned_l_lex 0.956) or confirms -l saturation holds with more budget.
+run_name: trec_best_l_max
+seed: 7
+data: {name: trec}
+encoder: {model: dleemiller/finecat-nli-l}
+pool: {size: 64, rounds: 10, patience: 4}
+lexical: {kind: tfidf_svd, dims: 128}
