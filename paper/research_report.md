@@ -100,16 +100,63 @@ individual", r = 0.92). Full per-class tables, exemplars, and error cases:
 
 ---
 
-## Table 5 — Status of the research questions
+## Generality across task types (RQ3) — three distinct patterns
+
+Same protocol on two more datasets (10 seeds, finecat-nli-l, hand-written expert pool). These are
+the honest "where HV wins and where it doesn't" evidence — the pattern **depends on task structure**.
+
+### Table 5a — AG News (4-way topic). Test accuracy.
+
+| System | 1 | 2 | 5 | 10 | 50 | 100 |
+|---|---|---|---|---|---|---|
+| **Zero-shot NLI (templates)** | **.892** | **.892** | **.892** | **.892** | **.892** | **.892** |
+| HV prior (0 labels) | .858 | .858 | .858 | .858 | .858 | .858 |
+| HV + RF head | .720 | .786 | .829 | .848 | .876 | .884 |
+| HV + L2-logreg | .725 | .811 | .841 | .853 | .857 | .862 |
+| MiniLM emb + logreg | .454 | .576 | .689 | .755 | .813 | .826 |
+| TF-IDF (word+char) | .321 | .367 | .472 | .577 | .759 | .805 |
+
+**Read:** on broad topics the **NLI prior is already near-ceiling** — zero-shot NLI (0.892) and the
+label-free prior head (0.858) win at every budget, and HV's *learned* heads add little at low N.
+TF-IDF is weak when starved but climbs steeply (0.32→0.81), the classic "lexical catches up with
+data on topic tasks."
+
+### Table 5b — Banking77 (77-way intent). Test accuracy.
+
+| System | 1 | 2 | 5 | 10 | 20 |
+|---|---|---|---|---|---|
+| **MiniLM emb + logreg** | **.535** | **.663** | **.792** | **.851** | **.886** |
+| TF-IDF (word+char) | .334 | .461 | .626 | .722 | .801 |
+| HV + RF head | .299 | .434 | .580 | .669 | .731 |
+| HV + L2-logreg | .306 | .380 | .468 | .524 | .568 |
+| Zero-shot NLI (77 templates) | .411 | .411 | .411 | .411 | .411 |
+| HV prior (0 labels) | .231 | .231 | .231 | .231 | .231 |
+
+**Read (HV LOSES here — the important negative result):** on fine-grained 77-way intent, dense
+embeddings win at every budget and TF-IDF beats HV too. The **24-hypothesis expert pool is far too
+thin to span 77 intents** — it structurally cannot separate the ~53 classes it has no hypothesis for
+(prior head floors at 0.231). This says HV's pool must **scale with the label space**: many-class
+tasks need a large *generated* pool, not a small hand-written one. A direct motivation for the
+pool-size ablation and generated-pool coverage.
+
+### Synthesis: HV's advantage is a function of task structure
+
+| Task type | Dataset | What wins at low N | HV verdict |
+|---|---|---|---|
+| Small clean taxonomy | TREC-6 | HV (prior → RF) | **HV dominates at all N** |
+| Broad topics | AG News | zero-shot NLI / HV prior | NLI prior near-ceiling; learned head adds little |
+| Fine-grained many-class | Banking77 | dense embeddings | **HV loses** with a thin pool; pool must scale to labels |
+
+## Table 6 — Status of the research questions
 
 | RQ | Question | Status | Verdict so far |
 |---|---|---|---|
 | RQ1 | Low-label performance | **Done (TREC)** | Strong: clean crossover; HV wins at every N on TREC |
 | RQ2 | Interpretability | **Done (TREC)** | Readable, stable, class-aligned importances |
-| RQ3 | vs standard representations | Partial | TF-IDF/emb/zero-shot done; fine-tuned encoder pending |
+| RQ3 | vs standard representations | **Done (3 datasets)** | 3 distinct patterns; HV wins TREC, ties/loses on AG News/Banking77 |
 | RQ4 | Generation & evolution | **Done (TREC)** | Generated ≥ expert for learned heads; evolution minor lift |
 | RQ5 | Text + tabular (CFPB) | Pending | Runner built (`run_text_tabular.py`), not yet run |
-| — | Beyond TREC (AG News, Banking77, …) | Wired, not run | Datasets loadable; curves not yet run |
+| — | Generality (AG News, Banking77) | **Done** | See Table 5a/5b; fine-tuned-encoder baseline still pending |
 
 ---
 
@@ -125,9 +172,13 @@ labels grow — combined with full interpretability. This is a defensible Pareto
 beat-everything claim.
 
 **Weakest results / caveats to flag to the reader:**
-- Results are **TREC-only** so far. TREC is semantically clean and NLI-favorable; prior notes expect
-  TF-IDF to be much more competitive on topic tasks (AG News) and HV to struggle on long documents
-  (20NG). **Do not generalize the "HV wins everywhere" pattern** until AG News/intent/CFPB are in.
+- **HV is not a universal winner — now shown, not just suspected.** On AG News the zero-shot NLI
+  prior already near-ceilings, so HV's learned heads add little; on **Banking77 HV loses outright**
+  to dense embeddings and TF-IDF because a 24-hypothesis pool cannot span 77 intents. The honest
+  framing is a task-structure-dependent Pareto point (Table 5a/5b), not a leaderboard claim.
+- The many-class result implies **pool size must scale with the label space** — the paper should run
+  the pool-size ablation and a large *generated* pool on Banking77 before drawing final conclusions
+  there.
 - The zero-label prior head depends on **clean class tags**; generated pools need a better tagging
   step to match the expert pool there.
 - Single-HGB head collapses to a constant class at <10 rows (a degenerate artifact); we use

@@ -33,10 +33,21 @@ class NLIFeaturizer:
         self.cache = ScoreCache(str(cache_path))
         self.costs = CostTracker()
         self.scorer = EntailmentScorer(self.cfg, self.cache, self.costs)
+        self._probs_memo: dict = {}  # in-process memo of full prob tensors, keyed by content
 
     def probs(self, texts: list[str], pool: list[str]) -> np.ndarray:
-        """(n_texts, n_hyp, 3) probabilities [entail, neutral, contradict]."""
-        return self.scorer.probs(list(texts), list(pool))
+        """(n_texts, n_hyp, 3) probabilities [entail, neutral, contradict].
+
+        Memoized on the (texts, pool) content so re-scoring the fixed test set across a whole
+        learning-curve sweep is a single dict hit rather than a fresh pass of SQLite lookups.
+        """
+        key = (hash(tuple(texts)), hash(tuple(pool)))
+        cached = self._probs_memo.get(key)
+        if cached is not None:
+            return cached
+        out = self.scorer.probs(list(texts), list(pool))
+        self._probs_memo[key] = out
+        return out
 
     def features(self, texts: list[str], pool: list[str],
                  score_mode: str = "entail_contradict") -> np.ndarray:

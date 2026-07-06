@@ -268,7 +268,28 @@ expert pool's edge is confined to the zero-label prior via clean tags.
   loadable; tests green (40/1 skip). Caveat: the config-less CLINC parquet-convert triplicates its
   test split — fine for the stratified sampler but note before citing CLINC test numbers.
 - AG News / SST-2 already had loaders + expert pools.
-- **Next:** run baseline+expert learning curves on AG News and Banking77 (each needs one `-l`
-  scoring pass), to test whether the TREC crossover generalizes to topic and intent tasks.
+
+### RESULT: generality — AG News + Banking77 (2026-07-06, `-l`, 10 seeds)
+
+Runs `lc_agnews_baselines_l` (shots 1–100) and `lc_banking77_baselines_l` (shots 1–20). Three
+datasets now show **three distinct patterns** — the honest generality story:
+
+| task type | dataset | low-N winner | HV verdict |
+|---|---|---|---|
+| small clean taxonomy | TREC-6 | HV (prior→RF) | **HV dominates at all N** |
+| broad topics | AG News | zero-shot NLI (.892) / HV prior (.858) | NLI prior near-ceiling; HV learned heads add little |
+| fine-grained 77-way | Banking77 | MiniLM emb (.535→.886) | **HV loses**; 24-hyp pool too thin for 77 intents |
+
+- **AG News:** zero-shot NLI is best at *every* budget (0.892) — broad topics are near-trivial for
+  the NLI prior; TF-IDF weak-but-climbing (0.32→0.81 by 100/class). HV's value is the label-free
+  prior, not the learned head, here.
+- **Banking77:** dense embeddings win everywhere; HV's hand-written 24-hypothesis pool structurally
+  can't span 77 intents (prior head floors at 0.231, covering only its ~24 tagged classes). **Key
+  implication: pool size must scale with the label space** — motivates a large *generated* pool +
+  the pool-size ablation for many-class tasks.
+
+**Efficiency fix landed:** `NLIFeaturizer.probs` now memoizes full prob tensors by (texts, pool)
+content, so the fixed test matrix is scored once per sweep instead of re-read from SQLite on every
+(k, seed). Cut the Banking77 sweep from a ~55-min projection to a few minutes (warm stays cached).
 
 _(Further phases appended as they run.)_

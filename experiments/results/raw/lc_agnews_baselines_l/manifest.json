@@ -1,0 +1,61 @@
+{
+  "run_id": "lc_agnews_baselines_l",
+  "created_utc": "2026-07-06T21:05:12Z",
+  "git_commit": "f38d19f",
+  "config": {
+    "dataset": "ag_news",
+    "encoder": "dleemiller/finecat-nli-l",
+    "shots": [
+      1,
+      2,
+      3,
+      5,
+      10,
+      20,
+      50,
+      100
+    ],
+    "seeds": 10,
+    "test_size": 2000,
+    "test_seed": 7,
+    "systems": "baselines",
+    "expert_pool_size": 8
+  },
+  "config_hash": "6cb384e24aae",
+  "seed": 7,
+  "dataset": "ag_news",
+  "encoder": "dleemiller/finecat-nli-l",
+  "pool_id": "expert",
+  "libraries": {
+    "python": "3.13.9",
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.39",
+    "numpy": "2.5.0",
+    "scipy": "1.18.0",
+    "sklearn": "1.9.0",
+    "torch": "2.12.1+cu130",
+    "transformers": "5.13.0",
+    "sentence_transformers": "5.6.0",
+    "datasets": "5.0.0",
+    "cuda": "NVIDIA GeForce RTX 5090"
+  },
+  "expert_pool": [
+    "The article is about international news, politics, or world events.",
+    "The article describes conflict, diplomacy, or a government.",
+    "The article is about a sports team, match, or athlete.",
+    "The article reports a game result or a sporting competition.",
+    "The article is about a company, market, or the economy.",
+    "The article discusses finance, stocks, or corporate earnings.",
+    "The article is about science, technology, or computing.",
+    "The article describes a scientific discovery or a new technology."
+  ],
+  "expert_tags": [
+    "World",
+    "World",
+    "Sports",
+    "Sports",
+    "Business",
+    "Business",
+    "Sci/Tech",
+    "Sci/Tech"
+  ]
+}
