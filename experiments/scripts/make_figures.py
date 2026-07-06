@@ -29,7 +29,8 @@ FIGDIR = pathlib.Path(__file__).resolve().parents[1] / "results" / "figures"
 # stable, readable ordering + colors; systems not listed still plot (default cycle)
 _ORDER = [
     "hv_prior_fixed", "hv_prior_reweight", "hv_expert_rf", "hv_expert_logreg",
-    "hv_generated_rf", "hv_generated_prior_fixed", "hv_generated_logreg",
+    "hv_static_rf", "hv_static_prior_fixed", "hv_static_logreg",
+    "hv_evolved_rf", "hv_evolved_prior_fixed", "hv_evolved_logreg",
     "zeroshot_nli", "tfidf_word+logreg", "tfidf_char+logreg", "tfidf_word+char+logreg",
     "emb:all-MiniLM-L6-v2+logreg",
 ]

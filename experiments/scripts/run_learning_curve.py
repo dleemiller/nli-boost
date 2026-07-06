@@ -31,12 +31,12 @@ RESULTS_ROOT = pathlib.Path(__file__).resolve().parents[1] / "results" / "raw"
 
 
 def build_systems(which: str, raw, fz: NLIFeaturizer, pool, tags, seed: int,
-                  gen_pool=None, gen_tags=None) -> list:
+                  gen_pools: dict | None = None) -> list:
     """Instantiate the requested system set.
 
-    `pool`/`tags` are the hand-written fixed-expert HV pool. `gen_pool`/`gen_tags`, if given,
-    are an LLM-generated pool (from Phase 2) added as hv_generated_* systems — the ONLY part of
-    the study that needs an LM, and it plugs in here with no other change.
+    `pool`/`tags` are the hand-written fixed-expert HV pool. `gen_pools` maps a short name to a
+    (pool, tags) pair for each LLM-generated pool (Phase 2), each added as hv_<name>_* systems —
+    the ONLY part of the study that needs an LM, and it plugs in here with no other change.
     """
     n = raw.n_classes
     zshot = hypotheses.ZEROSHOT_TEMPLATES[raw.name]
@@ -58,12 +58,12 @@ def build_systems(which: str, raw, fz: NLIFeaturizer, pool, tags, seed: int,
             S.PriorAggregation(n, pool, tags, raw.class_names, fz, mode="reweight",
                                name="hv_prior_reweight"),
         ]
-    if gen_pool:
-        out += [S.HVHead(n, gen_pool, fz, head="rf", seed=seed, name="hv_generated_rf"),
-                S.HVHead(n, gen_pool, fz, head="logreg_cv", seed=seed, name="hv_generated_logreg")]
-        if gen_tags and all(t in raw.class_names for t in gen_tags):
-            out += [S.PriorAggregation(n, gen_pool, gen_tags, raw.class_names, fz, mode="fixed",
-                                       name="hv_generated_prior_fixed")]
+    for gname, (gpool, gtags) in (gen_pools or {}).items():
+        out += [S.HVHead(n, gpool, fz, head="rf", seed=seed, name=f"hv_{gname}_rf"),
+                S.HVHead(n, gpool, fz, head="logreg_cv", seed=seed, name=f"hv_{gname}_logreg")]
+        if gtags and all(t in raw.class_names for t in gtags):
+            out += [S.PriorAggregation(n, gpool, gtags, raw.class_names, fz, mode="fixed",
+                                       name=f"hv_{gname}_prior_fixed")]
     return out
 
 
@@ -72,6 +72,15 @@ def load_generated_pool(path) -> tuple[list[str], list[str] | None]:
     if obj and isinstance(obj[0], dict):
         return [h["text"] for h in obj], [h.get("intended_class") for h in obj]
     return list(obj), None
+
+
+def parse_gen_pools(specs: list[str] | None) -> dict:
+    """Each spec is 'name=path/to/pool.json' -> {name: (pool, tags)}."""
+    out = {}
+    for spec in specs or []:
+        name, _, path = spec.partition("=")
+        out[name] = load_generated_pool(path)
+    return out
 
 
 def main() -> None:
@@ -85,8 +94,8 @@ def main() -> None:
     ap.add_argument("--test-size", type=int, default=2000)
     ap.add_argument("--test-seed", type=int, default=7)
     ap.add_argument("--systems", default="baselines")
-    ap.add_argument("--generated-pool", default=None,
-                    help="JSON list of {text,intended_class} — adds hv_generated_* systems (Phase 2)")
+    ap.add_argument("--generated-pool", nargs="*", default=None,
+                    help="one or more 'name=pool.json' — adds hv_<name>_* systems (Phase 2)")
     ap.add_argument("--run-id", default=None)
     args = ap.parse_args()
 
@@ -110,8 +119,7 @@ def main() -> None:
     fz = NLIFeaturizer(encoder=args.encoder, device=args.device, verbose=True)
     pool, tags = hypotheses.expert_pool(args.dataset)
     zshot = hypotheses.ZEROSHOT_TEMPLATES[args.dataset]
-    gen_pool, gen_tags = (load_generated_pool(args.generated_pool)
-                          if args.generated_pool else (None, None))
+    gen_pools = parse_gen_pools(args.generated_pool)
 
     # ---- pre-compute the exact train rows the sweep will touch (union over k, seed) ------
     y_full = raw.y_train
@@ -128,8 +136,8 @@ def main() -> None:
           f"+ {len(zshot)} templates on {args.encoder} ...")
     fz.features(warm_texts, pool, score_mode="entail_contradict")
     fz.features(warm_texts, zshot, score_mode="entail")
-    if gen_pool:
-        fz.features(warm_texts, gen_pool, score_mode="entail_contradict")
+    for _gname, (gpool, _gt) in gen_pools.items():
+        fz.features(warm_texts, gpool, score_mode="entail_contradict")
     print(f"[nli] cache warm in {time.time()-t0:.0f}s  cost={fz.cost_summary()}")
 
     repro.Manifest(
@@ -149,7 +157,7 @@ def main() -> None:
                 tr_texts = [raw.train_texts[i] for i in idx]
                 tr_y = y_full[idx]
                 for sysobj in build_systems(args.systems, raw, fz, pool, tags, seed,
-                                            gen_pool=gen_pool, gen_tags=gen_tags):
+                                            gen_pools=gen_pools):
                     t = time.time()
                     try:
                         proba = sysobj.run(tr_texts, tr_y, raw.test_texts)

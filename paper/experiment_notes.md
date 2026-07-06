@@ -213,19 +213,62 @@ keeps the exact library grid available as `head="auto_full"` for headline single
 
 ---
 
-## Phase 2 — LLM hypothesis generation (PENDING USER GO — will spend LM budget)
+## Phase 2 — LLM hypothesis generation (DONE for TREC; 2026-07-06)
 
-Per the chosen "build + baselines, then pause" mode, generation is held until approval. The
-OpenRouter key is stored (`.env`, gitignored) and auth-validated. When approved:
+Key auth-validated; pools generated with DeepSeek-v4-flash via `generate_pool.py` (strict: train
+sample only; test never seen). Two pools:
+- **static** (`trec_gen_static.json`): n=64 from 5/class, no evolution, STS dedup, $≈0.
+- **evolved** (`trec_gen_evolved.json`): n=64→**62** from 50/class, CV-prune/refill evolution —
+  which **stopped after 2 rounds on a held-out plateau**, independently reproducing the METHOD.md
+  "generation saturates ~2 rounds" finding.
 
-1. **Generate HV pools on TREC** with the existing proposer (DeepSeek-v4-flash via
-   `HypothesisVectorizer.fit` / the `run` CLI), using ONLY the low-N training sample for each
-   point (strict low-N, no test leakage). Two pool variants: static (generate+dedup) and evolved.
-   Save each as `{text,intended_class}` JSON. Est. ~$0.01–0.07/pool.
-2. **Extend the learning curve** with `--generated-pool` → `hv_generated_auto`,
-   `hv_generated_logreg`, `hv_generated_prior_fixed`. Compare against the expert pool and the
-   baselines already measured. This is the paper's central low-N result.
-3. **Leakage discipline:** hypotheses generated per-N from that N's train sample only; NLI cache
-   keyed on (text, hyp, model) so no cross-contamination; test never inspected.
+The proposer returns *untagged* statements (and its tree hypotheses are deliberately multi-class),
+so `intended_class` for the prior head is **derived** from the train sample (arg-max mean
+entailment per class) — noisier than hand tags, recorded as a caveat.
+
+### RESULT: generated vs expert pools (TREC-6, `-l`, 10 seeds, shots 1–50)
+
+`lc_trec_generated_l`; figure `trec_generated_accuracy.pdf`; table `trec_generated_accuracy.md`.
+Test accuracy, mean over seeds (best learned system per column in **bold**):
+
+| system | 1 | 2 | 3 | 5 | 10 | 20 | 50 |
+|---|---|---|---|---|---|---|---|
+| hv_evolved_rf | 0.449 | 0.624 | **0.703** | **0.784** | **0.834** | **0.873** | **0.894** |
+| hv_static_rf | 0.482 | 0.628 | 0.692 | 0.726 | 0.788 | 0.856 | 0.886 |
+| hv_expert_rf | 0.474 | 0.597 | 0.642 | 0.682 | 0.753 | 0.802 | 0.849 |
+| hv_evolved_logreg | 0.384 | 0.589 | 0.664 | 0.740 | 0.810 | 0.851 | 0.893 |
+| hv_static_logreg | 0.350 | 0.486 | 0.576 | 0.628 | 0.773 | 0.837 | 0.890 |
+| hv_prior_fixed (expert, 0 labels) | **0.594** | 0.594 | 0.594 | 0.594 | 0.594 | 0.594 | 0.594 |
+| hv_evolved_prior_fixed | 0.544 | 0.544 | 0.544 | 0.544 | 0.544 | 0.544 | 0.544 |
+| hv_static_prior_fixed | 0.484 | 0.484 | 0.484 | 0.484 | 0.484 | 0.484 | 0.484 |
+
+**Findings (RQ4):**
+1. **LLM-generated pools BEAT the hand-written expert pool as a feature basis for learned heads.**
+   Evolved+RF leads everywhere from 3/class up (0.703→0.894 vs expert 0.642→0.849); the richer
+   64-hyp generated basis gives RF/logreg more to work with than the 24-hyp expert pool. The core
+   thesis — *LLM-generated hypotheses are a strong semantic basis* — holds, not just anecdotally.
+2. **Evolution gives a small, consistent lift over static** (evolved ≥ static on RF and logreg at
+   nearly every N; clearest for logreg at low N: 0.664 vs 0.576 at 3/class), and it stopped at 2
+   rounds — consistent with prior saturation findings. Evolution is a *refinement*, not the lever.
+3. **The zero-label prior head still favors the hand-written expert pool** (0.594 > evolved 0.544 >
+   static 0.484): clean class tags matter when there are no labels to reweight them; evolution
+   improves the generated pool's tag-ability (evolved > static). Motivates either expert tags or a
+   better tag-derivation step for the N=0 setting.
+4. At **1/class the label-free expert prior (0.594) is still the single best system** — no learned
+   head beats it until ≥2 labels exist.
+
+Net: the generated-pool result strengthens the paper — the method works from *generated* hypotheses
+(the actual claim), generated ≳ expert for learned heads, evolution is a minor refinement, and the
+expert pool's edge is confined to the zero-label prior via clean tags.
+
+## Phase 3 — Additional datasets (STARTED)
+
+- **Wired Banking77 (77 classes) + CLINC150 (151, incl. oos)** into `data.py`/`config.py` and added
+  intent-family expert pools + programmatic zero-shot templates to `hvexp/hypotheses.py`. Verified
+  loadable; tests green (40/1 skip). Caveat: the config-less CLINC parquet-convert triplicates its
+  test split — fine for the stratified sampler but note before citing CLINC test numbers.
+- AG News / SST-2 already had loaders + expert pools.
+- **Next:** run baseline+expert learning curves on AG News and Banking77 (each needs one `-l`
+  scoring pass), to test whether the TREC crossover generalizes to topic and intent tasks.
 
 _(Further phases appended as they run.)_

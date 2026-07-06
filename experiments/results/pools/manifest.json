@@ -1,0 +1,40 @@
+{
+  "run_id": "trec_gen_evolved",
+  "created_utc": "2026-07-06T19:04:14Z",
+  "git_commit": "28f8432-dirty",
+  "config": {
+    "dataset": "trec",
+    "n": 64,
+    "sample_per_class": 50,
+    "seed": 7,
+    "encoder": "dleemiller/finecat-nli-l",
+    "device": "cuda",
+    "lm": "openrouter/deepseek/deepseek-v4-flash",
+    "dedup": "sts",
+    "evolve": true,
+    "tag": true,
+    "out": "experiments/results/pools/trec_gen_evolved.json"
+  },
+  "config_hash": "32e192d20a4b",
+  "seed": 7,
+  "dataset": "trec",
+  "encoder": "dleemiller/finecat-nli-l",
+  "pool_id": "trec_gen_evolved",
+  "libraries": {
+    "python": "3.13.9",
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.39",
+    "numpy": "2.5.0",
+    "scipy": "1.18.0",
+    "sklearn": "1.9.0",
+    "torch": "2.12.1+cu130",
+    "transformers": "5.13.0",
+    "sentence_transformers": "5.6.0",
+    "datasets": "5.0.0",
+    "cuda": "NVIDIA GeForce RTX 5090"
+  },
+  "n_generated": 62,
+  "gen_seconds": 549.4,
+  "sample_texts": 300,
+  "lm": "openrouter/deepseek/deepseek-v4-flash",
+  "evolve": true
+}
