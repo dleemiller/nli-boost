@@ -402,4 +402,31 @@ then TF-IDF overtakes at the full 39k train set. First non-fine-tune case where 
 clearly wins data-rich — "ordinary models catch up as N grows." Fifth generality pattern. Figure
 `goemotions_learning_curve_accuracy.pdf`. Tests green after wiring (config Literal + data spec + pool).
 
+## Phase 10 — CFPB temporal natural-rate run (2026-07-07)
+
+Natural rate (3.6% relief), temporal split (oldest 24k train → newest 6k test; drift 3.0%→5.9%),
+64-hyp pool from temporal-train narratives only (`tt_cfpb_temporal`). At 3.6% base rate accuracy is
+majority-dominated (~0.94); AUC + macro-F1 are the metrics.
+
+| config | AUC | macro-F1 |
+|---|---|---|
+| tabular | .875 | .497 |
+| tfidf | .875 | .548 |
+| hv | .867 | .513 |
+| tabular+tfidf | .891 | .550 |
+| tabular+hv | .891 | .551 |
+| tabular+tfidf+hv | **.899** | **.587** |
+
+**Marginal-value story holds under the realistic temporal/natural-rate setting**: HV adds +0.016 AUC
+over tabular, and +0.008 AUC / +0.037 macro-F1 on top of tabular+TF-IDF — the macro-F1 gain shows HV
+improves rare-class (relief) detection under imbalance + drift. **NOT comparable to the published
+0.78/0.69 benchmark** (recent 30k window at 3.6% vs full-history ~8%; plain one-hot vs LDA+engineered
+tabular; our tabular baseline alone 0.875 already exceeds their numbers) — we claim only HV's marginal
+contribution, not beating the benchmark.
+
+Ops note: the 1.92M-pair -l scoring pass on 512-char narratives is slow (~300 pairs/s); paused
+mid-run for a GPU thermal concern and resumed cleanly from the local cache (797k pairs were cache
+hits). Added `--limit`/`--split temporal` to prep_cfpb.py. Extended `prep_cfpb.load_frame` for
+natural-rate streaming; `run_text_tabular.py` already supported the temporal split.
+
 _(Further phases appended as they run.)_

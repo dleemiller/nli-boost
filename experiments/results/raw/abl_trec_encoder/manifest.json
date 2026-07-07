@@ -1,7 +1,7 @@
 {
   "run_id": "abl_trec_encoder",
-  "created_utc": "2026-07-07T14:31:39Z",
-  "git_commit": "a1fad44-dirty",
+  "created_utc": "2026-07-07T16:01:23Z",
+  "git_commit": "62f370b-dirty",
   "config": {
     "dataset": "trec",
     "encoder": "dleemiller/finecat-nli-l",

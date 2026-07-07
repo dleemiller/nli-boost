@@ -39,7 +39,13 @@ _CLOSED = {
 _CATS = ["Product", "Company", "State", "Submitted via"]
 
 
-def load_frame(per_class: int):
+def load_frame(per_class: int | None = None, limit: int | None = None):
+    """Stream closed complaints that have a narrative.
+
+    `per_class`: balanced — up to this many of EACH relief class (stable AUC; artificial rate).
+    `limit`: NATURAL rate — the first `limit` closed+narrative complaints, keeping the real ~8%
+    monetary-relief base rate (the benchmark setting; pair with a temporal split).
+    """
     import pandas as pd
     from datasets import load_dataset
 
@@ -51,16 +57,18 @@ def load_frame(per_class: int):
         if not (narrative and resp in _CLOSED):
             continue
         y = int(resp == "Closed with monetary relief")
-        if kept[y] >= per_class:
+        if per_class is not None and kept[y] >= per_class:
             continue
         kept[y] += 1
         rows.append({"date": r["Date received"], "narrative": narrative,
                      "Product": r.get("Product") or "unknown", "Company": r.get("Company") or "unknown",
                      "State": r.get("State") or "unknown",
                      "Submitted via": r.get("Submitted via") or "unknown", "relief": y})
-        if kept[0] >= per_class and kept[1] >= per_class:
+        if per_class is not None and kept[0] >= per_class and kept[1] >= per_class:
             break
-    df = pd.DataFrame(rows)
+        if limit is not None and len(rows) >= limit:
+            break
+    df = pd.DataFrame(rows).sort_values("date").reset_index(drop=True)
     # rare companies -> "other" (matches examples/cfpb.py; keeps the one-hot manageable)
     top = set(df["Company"].value_counts().head(200).index)
     df["Company"] = df["Company"].where(df["Company"].isin(top), "other")
@@ -69,7 +77,12 @@ def load_frame(per_class: int):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--per-class", type=int, default=2500)
+    ap.add_argument("--per-class", type=int, default=None,
+                    help="balanced: up to N of each relief class (random split)")
+    ap.add_argument("--limit", type=int, default=None,
+                    help="natural-rate: first N closed+narrative complaints (temporal split)")
+    ap.add_argument("--split", default=None, choices=["random", "temporal"],
+                    help="pool-gen train selection; default random for --per-class, temporal for --limit")
     ap.add_argument("--n-hypotheses", type=int, default=64)
     ap.add_argument("--evolve", action="store_true",
                     help="prune hypotheses by MARGINAL value over the tabular block (slower)")
@@ -89,19 +102,27 @@ def main() -> None:
     outdir = pathlib.Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    print(f"[cfpb] streaming balanced sample: {args.per_class}/class ...")
-    df = load_frame(args.per_class)
-    csv_path = outdir / "cfpb.csv"
+    if args.per_class is None and args.limit is None:
+        args.per_class = 2500  # default to the balanced setting
+    split = args.split or ("temporal" if args.limit is not None else "random")
+    mode = f"natural-rate limit={args.limit}" if args.limit is not None else f"balanced {args.per_class}/class"
+    print(f"[cfpb] streaming {mode}, split={split} ...")
+    df = load_frame(per_class=args.per_class, limit=args.limit)
+    outfile = "cfpb_temporal.csv" if split == "temporal" else "cfpb.csv"
+    csv_path = outdir / outfile
     df.to_csv(csv_path, index=False)
     print(f"[cfpb] {len(df)} rows -> {csv_path}  (relief rate {df['relief'].mean():.3f})")
 
-    # replicate run_text_tabular's random split (seed, test_frac) so the pool sees TRAIN ONLY
+    # select the pool-gen TRAIN rows to match the split run_text_tabular will use (no test leakage)
     n = len(df)
     n_test = max(1, int(round(args.test_frac * n)))
-    perm = np.random.default_rng(args.seed).permutation(n)
-    tr_idx = perm[n_test:]
+    if split == "temporal":  # df is date-sorted -> oldest (n - n_test) are train
+        tr_idx = np.arange(n - n_test)
+    else:  # random split (seed, test_frac), matching run_text_tabular's rng.permutation
+        tr_idx = np.random.default_rng(args.seed).permutation(n)[n_test:]
     tr = df.iloc[tr_idx]
-    print(f"[cfpb] pool generated from {len(tr)} train narratives (test {n_test} held out)")
+    print(f"[cfpb] pool generated from {len(tr)} {split}-train narratives "
+          f"(train relief {tr['relief'].mean():.3f}; test {n_test} held out)")
 
     baseline = None
     if args.evolve:
@@ -123,10 +144,10 @@ def main() -> None:
     pool = list(vec.hypotheses_)
     dt = time.time() - t0
 
-    pool_path = outdir / "cfpb_pool.json"
+    pool_path = outdir / (f"cfpb_pool_{split}.json")
     pool_path.write_text(json.dumps(pool, indent=2))  # list of strings for run_text_tabular
-    repro.Manifest(run_id="cfpb_pool", config=vars(args), seed=args.seed, dataset="cfpb",
-                   encoder=args.encoder, pool_id="cfpb_pool",
+    repro.Manifest(run_id=f"cfpb_pool_{split}", config=vars(args), seed=args.seed, dataset="cfpb",
+                   encoder=args.encoder, pool_id=f"cfpb_pool_{split}",
                    extra={"n_hypotheses": len(pool), "gen_seconds": round(dt, 1),
                           "evolve": args.evolve, "relief_rate": float(df["relief"].mean())}).write(outdir)
     print(f"[cfpb] {len(pool)} hypotheses in {dt:.0f}s -> {pool_path}")

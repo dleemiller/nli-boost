@@ -285,10 +285,33 @@ or compensation", "emotional distress rather than a specific financial loss"). T
 claim — hypothesis features can be justified by their marginal value over existing structured
 features in a real, regulated pipeline.
 
-*Caveats:* balanced/random setup (AUC ~0.91–0.94) is **not** the temporal natural-rate benchmark
-(0.78 hybrid / 0.69 TF-IDF, Wang et al. 2026) — not directly comparable. The pool is static (no
-marginal-over-tabular pruning yet); the `--evolve` path that prunes hypotheses by marginal value
-over the tabular block is the natural next refinement.
+*Caveats:* this balanced/random setup (AUC ~0.91–0.94) is a clean controlled comparison, not the
+benchmark protocol; the temporal natural-rate run is Table 6b.
+
+### Table 6b — CFPB, natural rate + temporal split (benchmark protocol)
+
+30,000 complaints at the **real ~3.6% monetary-relief rate**, **temporal** split (oldest 24k train →
+newest 6k test; relief drifts 3.0%→5.9% over the window), HGB head, 64-hyp pool generated from the
+temporal-train narratives only. At a 3.6% base rate **accuracy is majority-dominated (~0.94 ≈
+predict-none) and uninformative — ROC-AUC and macro-F1 are the metrics.**
+
+| configuration | tabular | tfidf | hv | tab+tfidf | **tab+hv** | **tab+tfidf+hv** |
+|---|---|---|---|---|---|---|
+| ROC-AUC | .875 | .875 | .867 | .891 | **.891** | **.899** |
+| macro-F1 | .497 | .548 | .513 | .550 | .551 | **.587** |
+
+**Read:** the marginal-value story **holds under the realistic temporal, natural-rate setting**. HV
+alone is competitive (AUC 0.867 ≈ tabular/TF-IDF 0.875); adding HV to the tabular block lifts AUC
++0.016, and on top of tabular+TF-IDF it still adds **+0.008 AUC and +0.037 macro-F1** (best 0.899 /
+0.587) — the macro-F1 gain shows HV specifically improves detection of the rare *relief* class under
+class imbalance and temporal drift.
+
+*Not comparable to the published benchmark (0.78 hybrid / 0.69 TF-IDF, Wang et al. 2026):* our
+sample is a recent 30k window at a 3.6% rate (vs their full historical data at ~8%), the split
+window differs, and our tabular block is plain one-hot Product/Company/State/channel (vs their LDA
+topics + engineered features). Our tabular baseline alone (0.875) already exceeds their numbers
+because company/product one-hot is very predictive in this window, so **we make no claim of beating
+the benchmark** — the result we stand behind is HV's *marginal* contribution over the other channels.
 
 ## Table 7 — Status of the research questions
 
