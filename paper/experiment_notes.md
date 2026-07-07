@@ -352,4 +352,20 @@ Confirms pool size is a task-dependent knob and that Banking77's earlier loss wa
 pool, not a method limit. (Used a single RF head, not the CV grid — the grid on 77 classes was
 ~2 min/fit; RF is ~1s and is the paper's flexible-head line anyway.)
 
+## Phase 7 — fine-tuned encoder baseline (2026-07-07)
+
+Fine-tune DistilBERT per training subsample (`FineTunedEncoder`, systems=finetuned; 5 seeds,
+`lc_trec_finetuned`; combined figure `trec_with_finetune_accuracy.pdf`). TREC-6 accuracy:
+
+| shots | 1 | 2 | 3 | 5 | 10 | 20 | 50 | 100 | all |
+|---|---|---|---|---|---|---|---|---|---|
+| fine-tune | .263 | .311 | .419 | .528 | .739 | .822 | .904 | .921 | **.964** |
+| HV expert-RF | .474 | .597 | .642 | .682 | .753 | .802 | .849 | .892 | .954 |
+
+Textbook Pareto boundary: fine-tuning is **catastrophic at low N** (0.263 @1/class, below every
+baseline), **crosses HV at ~5–10/class**, and **wins the data-rich regime** (0.964 @all vs HV
+0.954). Confirms the paper's positioning — HV owns 1–10/class + interpretability + LLM-free serving;
+a fine-tuned encoder owns ≥20/class but is opaque and data-hungry. Recipe: AdamW lr 2e-5, 20 epochs
+capped at 1000 steps, max_len 128; ~15–40s/fit.
+
 _(Further phases appended as they run.)_

@@ -42,6 +42,26 @@ single-template zero-shot NLI by **+16.6 pts using zero labels** (0.594 vs 0.428
 
 ---
 
+## Table 1b — vs a fine-tuned encoder (the strong data-rich reference)
+
+Fine-tuning DistilBERT end-to-end per training subsample (5 seeds; figure
+`trec_with_finetune_accuracy.pdf`) draws the Pareto boundary that frames the whole method.
+
+| examples/class | 1 | 2 | 3 | 5 | 10 | 20 | 50 | 100 | all |
+|---|---|---|---|---|---|---|---|---|---|
+| fine-tuned DistilBERT | 0.263 | 0.311 | 0.419 | 0.528 | 0.739 | 0.822 | **0.904** | **0.921** | **0.964** |
+| HV + RF head | 0.474 | 0.597 | 0.642 | 0.682 | 0.753 | 0.802 | 0.849 | 0.892 | 0.954 |
+| HV prior (0 labels) | **0.594** | **0.594** | 0.594 | 0.594 | 0.594 | 0.594 | 0.594 | 0.594 | 0.594 |
+
+**Read — a clean regime split.** Fine-tuning is **catastrophic at low N** (0.263 at 1/class — below
+every baseline; no semantic prior and only a handful of gradient steps), **crosses HV at ~5–10
+examples/class**, and **wins the data-rich regime** (0.904→0.964 at 50→all). HV owns 1–10/class; the
+fine-tuned encoder owns ≥20/class; at full data they converge (0.954 vs 0.964, HV staying
+interpretable). This is the paper's positioning in one figure — HV is the low-label, interpretable,
+LLM-free operating point; a fine-tuned encoder is the accurate-but-opaque, data-hungry one.
+
+---
+
 ## Table 2 — RQ4: LLM-generated pools vs hand-written expert pool
 
 Test accuracy on TREC-6 (10 seeds), low-N region. **Bold** = best learned head in column.
@@ -228,7 +248,7 @@ over the tabular block is the natural next refinement.
 |---|---|---|---|
 | RQ1 | Low-label performance | **Done (TREC)** | Strong: clean crossover; HV wins at every N on TREC |
 | RQ2 | Interpretability | **Done (TREC)** | Readable, stable, class-aligned importances |
-| RQ3 | vs standard representations | **Done (3 datasets)** | 3 distinct patterns; HV wins TREC, ties/loses on AG News/Banking77 |
+| RQ3 | vs standard representations | **Done (3 datasets + fine-tune)** | 3 patterns; fine-tuned encoder crosses HV at ~5–10/class (Table 1b) |
 | RQ4 | Generation & evolution | **Done (TREC)** | Generated ≥ expert for learned heads; evolution minor lift |
 | RQ5 | Text + tabular (CFPB) | **Done (balanced)** | HV adds +0.021 AUC over tabular, +0.007 over tabular+TF-IDF (Table 6) |
 | — | Generality (AG News, Banking77) | **Done** | See Table 5a/5b; fine-tuned-encoder baseline still pending |

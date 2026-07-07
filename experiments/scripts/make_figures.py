@@ -32,8 +32,10 @@ _ORDER = [
     "hv_static_rf", "hv_static_prior_fixed", "hv_static_logreg",
     "hv_evolved_rf", "hv_evolved_prior_fixed", "hv_evolved_logreg",
     "zeroshot_nli", "tfidf_word+logreg", "tfidf_char+logreg", "tfidf_word+char+logreg",
-    "emb:all-MiniLM-L6-v2+logreg",
+    "emb:all-MiniLM-L6-v2+logreg", "finetune:distilbert-base-uncased",
 ]
+# baselines drawn dashed to separate them from the HV method lines
+_DASHED = ("tfidf", "emb", "zeroshot", "finetune")
 
 
 def _xpos(shots, all_x):
@@ -60,7 +62,7 @@ def plot(rows, metric: str, title: str, out: str) -> None:
             his.append(hi)
         if not xs:
             continue
-        style = "--" if sysname.startswith(("tfidf", "emb", "zeroshot")) else "-"
+        style = "--" if sysname.startswith(_DASHED) else "-"
         lw = 2.4 if sysname.startswith("hv_prior") else 1.6
         (line,) = ax.plot(xs, ys, style, marker="o", ms=4, lw=lw, label=sysname)
         ax.fill_between(xs, los, his, alpha=0.12, color=line.get_color())

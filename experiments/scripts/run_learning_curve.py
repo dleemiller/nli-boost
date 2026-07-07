@@ -41,6 +41,8 @@ def build_systems(which: str, raw, fz: NLIFeaturizer, pool, tags, seed: int,
     n = raw.n_classes
     zshot = hypotheses.ZEROSHOT_TEMPLATES[raw.name]
     out: list = []
+    if which in ("finetuned", "all"):
+        out.append(S.FineTunedEncoder(n, device=fz.cfg.device, seed=seed))
     if which in ("baselines", "all"):
         out += [
             S.TfidfLogReg(n, analyzer="word", ngram_range=(1, 2)),

@@ -147,6 +147,78 @@ class EmbeddingLogReg:
         return _proba_to_full(clf[-1], clf[:-1].transform(Xte), self.n_classes)
 
 
+# --------------------------------------------------------------------------- fine-tuned encoder
+class FineTunedEncoder:
+    """Fine-tune a small pretrained encoder (DistilBERT) end-to-end on the training subsample.
+
+    The strong *data-rich* supervised reference: weak at low N (few gradient steps, no semantic
+    prior) and strong at high N. Unlike HV it is opaque and needs a GPU fine-tune per fit.
+    A fixed recipe (AdamW, lr 2e-5) trained for `epochs` passes capped at `max_steps` total —
+    so low-N runs get many epochs over few rows and full-data runs stop at a few epochs.
+    """
+
+    def __init__(self, n_classes: int, model_name: str = "distilbert-base-uncased",
+                 device: str = "cuda", max_len: int = 128, lr: float = 2e-5, batch_size: int = 16,
+                 epochs: int = 20, max_steps: int = 1000, seed: int = 0, name: str | None = None):
+        self.n_classes = n_classes
+        self.model_name = model_name
+        self.device = device
+        self.max_len = max_len
+        self.lr = lr
+        self.batch_size = batch_size
+        self.epochs = epochs
+        self.max_steps = max_steps
+        self.seed = seed
+        self.name = name or f"finetune:{model_name.split('/')[-1]}"
+
+    def run(self, train_texts, y_train, test_texts) -> np.ndarray:
+        import torch
+        from torch.utils.data import DataLoader, TensorDataset
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+        torch.manual_seed(self.seed)
+        tok = AutoTokenizer.from_pretrained(self.model_name)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_name, num_labels=self.n_classes).to(self.device)
+
+        def encode(texts):
+            enc = tok(list(texts), truncation=True, padding=True, max_length=self.max_len,
+                      return_tensors="pt")
+            return enc["input_ids"], enc["attention_mask"]
+
+        ids, mask = encode(train_texts)
+        y = torch.tensor(np.asarray(y_train), dtype=torch.long)
+        loader = DataLoader(TensorDataset(ids, mask, y), batch_size=self.batch_size, shuffle=True)
+        opt = torch.optim.AdamW(model.parameters(), lr=self.lr, weight_decay=0.01)
+
+        model.train()
+        step = 0
+        for _ in range(self.epochs):
+            for bi, bm, by in loader:
+                opt.zero_grad()
+                out = model(input_ids=bi.to(self.device), attention_mask=bm.to(self.device),
+                            labels=by.to(self.device))
+                out.loss.backward()
+                opt.step()
+                step += 1
+                if step >= self.max_steps:
+                    break
+            if step >= self.max_steps:
+                break
+
+        model.eval()
+        tids, tmask = encode(test_texts)
+        probs = []
+        with torch.no_grad():
+            for s in range(0, len(test_texts), 64):
+                logits = model(input_ids=tids[s:s + 64].to(self.device),
+                               attention_mask=tmask[s:s + 64].to(self.device)).logits
+                probs.append(torch.softmax(logits, dim=1).cpu().numpy())
+        del model
+        torch.cuda.empty_cache()
+        return np.concatenate(probs, axis=0)
+
+
 # --------------------------------------------------------------------------- zero-shot NLI
 class ZeroShotNLI:
     """Score each class template's entailment; softmax over classes. No labels used."""
