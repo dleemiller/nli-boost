@@ -288,6 +288,16 @@ features in a real, regulated pipeline.
 *Caveats:* this balanced/random setup (AUC ~0.91–0.94) is a clean controlled comparison, not the
 benchmark protocol; the temporal natural-rate run is Table 6b.
 
+**Evolve marginal-pruning refinement (negative result).** We regenerated the pool with the
+evolution loop pruning hypotheses by their marginal value over a *holistic* tabular+TF-IDF baseline
+(so survivors must beat both the metadata and the lexical channel). It improved the pool's internal
+held-out metric (0.783→0.798 over 6 rounds) but **did not translate to a larger contribution on
+test**: the holistic `tabular+tfidf+hv` config is 0.942 (evolved) vs 0.945 (static) — within
+single-split noise — and pruning-for-marginal actually *weakened* standalone HV (hv_only 0.849 vs
+0.856) by dropping individually-predictive-but-redundant probes. So the marginal signal is real but
+thin, and evolution does not reliably sharpen it here — consistent with evolution being a minor
+lever (§RQ4). The static generated pool is the recommended default for this task.
+
 ### Table 6b — CFPB, natural rate + temporal split (benchmark protocol)
 
 30,000 complaints at the **real ~3.6% monetary-relief rate**, **temporal** split (oldest 24k train →

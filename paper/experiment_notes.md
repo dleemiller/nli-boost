@@ -429,4 +429,32 @@ mid-run for a GPU thermal concern and resumed cleanly from the local cache (797k
 hits). Added `--limit`/`--split temporal` to prep_cfpb.py. Extended `prep_cfpb.load_frame` for
 natural-rate streaming; `run_text_tabular.py` already supported the temporal split.
 
+## Phase 11 — CFPB evolve marginal-pruning refinement (2026-07-07) — NEGATIVE
+
+Regenerated the balanced CFPB pool with evolution pruning by marginal value over a **holistic
+tabular+TF-IDF baseline** (388 features), so survivors must beat both metadata AND lexical channels
+(`prep_cfpb.py --evolve --baseline tabular_tfidf`; pool `cfpb_pool_random_evolved_tabular_tfidf`,
+run `tt_cfpb_evolved`). 6 rounds, internal held-out 0.783→0.798 (the pruning mechanism works — it
+found more-complementary hypotheses like "charge after a dispute that was not refunded", "explicitly
+requests the company pay a specific amount").
+
+**But it did NOT help on test — an honest negative:**
+
+| config | static AUC | evolved AUC |
+|---|---|---|
+| hv_only | 0.856 | 0.849 |
+| tabular+hv | 0.935 | 0.932 |
+| tabular+tfidf+hv | **0.945** | 0.942 |
+
+Marginal of HV over tabular+tfidf: static +0.007 → evolved +0.004 (both within single-split noise).
+Pruning-for-marginal even *weakened* standalone HV (removed individually-predictive-but-redundant
+probes). Verdict: the marginal signal is real but thin; evolution does not reliably sharpen it here.
+Static generated pool stays the default. Reinforces "evolution is a minor lever" across datasets.
+
+The "holistic hv+tfidf" pass = the `tabular+tfidf+hv` config itself (0.945 static / 0.942 evolved) —
+the best config on this task, i.e. HV + TF-IDF + metadata together.
+
+prep_cfpb.py gained `--baseline {tabular,tabular_tfidf}` and `--from-csv` (regenerate a pool on
+existing rows without re-streaming).
+
 _(Further phases appended as they run.)_

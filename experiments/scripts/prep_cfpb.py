@@ -83,9 +83,13 @@ def main() -> None:
                     help="natural-rate: first N closed+narrative complaints (temporal split)")
     ap.add_argument("--split", default=None, choices=["random", "temporal"],
                     help="pool-gen train selection; default random for --per-class, temporal for --limit")
+    ap.add_argument("--from-csv", default=None,
+                    help="skip streaming; load an existing prepared CSV (same rows as a prior run)")
     ap.add_argument("--n-hypotheses", type=int, default=64)
     ap.add_argument("--evolve", action="store_true",
-                    help="prune hypotheses by MARGINAL value over the tabular block (slower)")
+                    help="prune hypotheses by MARGINAL value over the baseline block (slower)")
+    ap.add_argument("--baseline", default="tabular", choices=["tabular", "tabular_tfidf"],
+                    help="evolve pruning baseline: metadata only, or holistic metadata+TF-IDF")
     ap.add_argument("--max-text-chars", type=int, default=512)
     ap.add_argument("--encoder", default="dleemiller/finecat-nli-l")
     ap.add_argument("--device", default="cuda")
@@ -102,16 +106,23 @@ def main() -> None:
     outdir = pathlib.Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    if args.per_class is None and args.limit is None:
-        args.per_class = 2500  # default to the balanced setting
-    split = args.split or ("temporal" if args.limit is not None else "random")
-    mode = f"natural-rate limit={args.limit}" if args.limit is not None else f"balanced {args.per_class}/class"
-    print(f"[cfpb] streaming {mode}, split={split} ...")
-    df = load_frame(per_class=args.per_class, limit=args.limit)
-    outfile = "cfpb_temporal.csv" if split == "temporal" else "cfpb.csv"
-    csv_path = outdir / outfile
-    df.to_csv(csv_path, index=False)
-    print(f"[cfpb] {len(df)} rows -> {csv_path}  (relief rate {df['relief'].mean():.3f})")
+    import pandas as pd
+
+    if args.from_csv:
+        split = args.split or "random"
+        df = pd.read_csv(args.from_csv)
+        csv_path = pathlib.Path(args.from_csv)
+        print(f"[cfpb] loaded {len(df)} rows from {csv_path} (relief rate {df['relief'].mean():.3f}), split={split}")
+    else:
+        if args.per_class is None and args.limit is None:
+            args.per_class = 2500  # default to the balanced setting
+        split = args.split or ("temporal" if args.limit is not None else "random")
+        mode = f"natural-rate limit={args.limit}" if args.limit else f"balanced {args.per_class}/class"
+        print(f"[cfpb] streaming {mode}, split={split} ...")
+        df = load_frame(per_class=args.per_class, limit=args.limit)
+        csv_path = outdir / ("cfpb_temporal.csv" if split == "temporal" else "cfpb.csv")
+        df.to_csv(csv_path, index=False)
+        print(f"[cfpb] {len(df)} rows -> {csv_path}  (relief rate {df['relief'].mean():.3f})")
 
     # select the pool-gen TRAIN rows to match the split run_text_tabular will use (no test leakage)
     n = len(df)
@@ -124,9 +135,23 @@ def main() -> None:
     print(f"[cfpb] pool generated from {len(tr)} {split}-train narratives "
           f"(train relief {tr['relief'].mean():.3f}; test {n_test} held out)")
 
+    # evolution prunes hypotheses by MARGINAL value over this fixed baseline block (fit on train).
+    #   tabular       — one-hot metadata only
+    #   tabular_tfidf — HOLISTIC: metadata + TF-IDF(SVD) of the narrative, so surviving hypotheses
+    #                   must add signal beyond BOTH the structured fields and the lexical channel
     baseline = None
     if args.evolve:
-        baseline = OneHotEncoder(handle_unknown="ignore", sparse_output=False).fit_transform(tr[_CATS])
+        ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        baseline = ohe.fit_transform(tr[_CATS])
+        if args.baseline == "tabular_tfidf":
+            from sklearn.decomposition import TruncatedSVD
+            from sklearn.feature_extraction.text import TfidfVectorizer
+
+            tfv = TfidfVectorizer(analyzer="word", ngram_range=(1, 2), min_df=2, sublinear_tf=True)
+            Xtf = tfv.fit_transform(tr["narrative"].tolist())
+            svd = TruncatedSVD(n_components=min(128, Xtf.shape[1] - 1), random_state=args.seed)
+            baseline = np.hstack([baseline, svd.fit_transform(Xtf)])
+        print(f"[cfpb] evolve pruning baseline = {args.baseline} ({baseline.shape[1]} features)")
 
     t0 = time.time()
     vec = HypothesisVectorizer(
@@ -144,10 +169,11 @@ def main() -> None:
     pool = list(vec.hypotheses_)
     dt = time.time() - t0
 
-    pool_path = outdir / (f"cfpb_pool_{split}.json")
+    tag = f"{split}" + (f"_evolved_{args.baseline}" if args.evolve else "")
+    pool_path = outdir / f"cfpb_pool_{tag}.json"
     pool_path.write_text(json.dumps(pool, indent=2))  # list of strings for run_text_tabular
-    repro.Manifest(run_id=f"cfpb_pool_{split}", config=vars(args), seed=args.seed, dataset="cfpb",
-                   encoder=args.encoder, pool_id=f"cfpb_pool_{split}",
+    repro.Manifest(run_id=f"cfpb_pool_{tag}", config=vars(args), seed=args.seed, dataset="cfpb",
+                   encoder=args.encoder, pool_id=f"cfpb_pool_{tag}",
                    extra={"n_hypotheses": len(pool), "gen_seconds": round(dt, 1),
                           "evolve": args.evolve, "relief_rate": float(df["relief"].mean())}).write(outdir)
     print(f"[cfpb] {len(pool)} hypotheses in {dt:.0f}s -> {pool_path}")
