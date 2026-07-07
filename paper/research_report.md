@@ -139,13 +139,37 @@ thin to span 77 intents** — it structurally cannot separate the ~53 classes it
 tasks need a large *generated* pool, not a small hand-written one. A direct motivation for the
 pool-size ablation and generated-pool coverage.
 
+### Table 5c — Banking77 pool scaling (resolves the negative result)
+
+Testing the hypothesis that Banking77's loss was a *thin-pool* artifact, not a method limit: we
+generated a **256-hypothesis** pool (DeepSeek-v4-flash, from 3/class; covers **76 of 77 classes**
+vs the expert pool's ~24) and re-ran the curve (5 seeds). Test accuracy:
+
+| System | 1 | 2 | 3 | 5 | 10 | 20 |
+|---|---|---|---|---|---|---|
+| MiniLM emb + logreg | **.534** | **.673** | **.734** | **.789** | **.851** | **.886** |
+| **HV gen-256 + logreg** | .530 | .668 | .729 | .773 | .824 | .859 |
+| **HV gen-256 + RF** | .474 | .646 | .704 | .758 | .806 | .845 |
+| TF-IDF (word+char) | .341 | .464 | .545 | .624 | .722 | .800 |
+| HV expert-24 + RF | .309 | .438 | .510 | .580 | .668 | .731 |
+| HV expert-24 + logreg | .312 | .380 | .422 | .471 | .525 | .568 |
+
+**Read — hypothesis confirmed.** Scaling 24→256 hypotheses roughly **doubles** HV's low-N accuracy
+(0.31→0.53 at 1/class) and **closes almost the entire gap to dense embeddings** — gen-256+logreg
+tracks MiniLM within ~0.004–0.03 at every budget and beats TF-IDF throughout. HV was not
+structurally bad for fine-grained intent; **its pool must scale with the label space**. Embeddings
+still edge it slightly, so the honest statement is *parity-minus-a-hair with an opaque embedding
+probe, while staying interpretable and LLM-free*. (The label-free prior head improved too, 0.231→
+0.392, but averaging 256 auto-tagged hypotheses into 77 classes stays weak — the learned head is
+where the large pool pays off.)
+
 ### Synthesis: HV's advantage is a function of task structure
 
 | Task type | Dataset | What wins at low N | HV verdict |
 |---|---|---|---|
 | Small clean taxonomy | TREC-6 | HV (prior → RF) | **HV dominates at all N** |
 | Broad topics | AG News | zero-shot NLI / HV prior | NLI prior near-ceiling; learned head adds little |
-| Fine-grained many-class | Banking77 | dense embeddings | **HV loses** with a thin pool; pool must scale to labels |
+| Fine-grained many-class | Banking77 | dense embeddings | thin 24-hyp pool loses; **256-hyp generated pool reaches embedding parity** (Table 5c) |
 
 ## Table 6 — Status of the research questions
 
@@ -176,9 +200,10 @@ beat-everything claim.
   prior already near-ceilings, so HV's learned heads add little; on **Banking77 HV loses outright**
   to dense embeddings and TF-IDF because a 24-hypothesis pool cannot span 77 intents. The honest
   framing is a task-structure-dependent Pareto point (Table 5a/5b), not a leaderboard claim.
-- The many-class result implies **pool size must scale with the label space** — the paper should run
-  the pool-size ablation and a large *generated* pool on Banking77 before drawing final conclusions
-  there.
+- The many-class deficit was a **thin-pool artifact, now fixed**: a 256-hypothesis generated pool
+  reaches embedding parity on Banking77 (Table 5c). The remaining honest caveat is that dense
+  embeddings still edge HV by a few points there — HV's win is interpretability + LLM-free serving
+  at near-parity accuracy, not raw accuracy.
 - The zero-label prior head depends on **clean class tags**; generated pools need a better tagging
   step to match the expert pool there.
 - Single-HGB head collapses to a constant class at <10 rows (a degenerate artifact); we use

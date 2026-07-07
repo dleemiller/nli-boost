@@ -1,0 +1,1026 @@
+[
+  {
+    "text": "The text describes a financial transaction or a problem with a financial transaction.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text describes a transfer, a top-up, or a problem related to transferring or topping up money.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text asks about a physical or virtual card, its features, or problems with a card.",
+    "intended_class": "virtual_card_not_working"
+  },
+  {
+    "text": "The text describes a transfer-related problem or question.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text describes a card payment or a problem with a card payment.",
+    "intended_class": "declined_card_payment"
+  },
+  {
+    "text": "The text asks about getting a new card or activating an existing card.",
+    "intended_class": "activate_my_card"
+  },
+  {
+    "text": "The text asks about account details, currencies, or exchange rates.",
+    "intended_class": "exchange_rate"
+  },
+  {
+    "text": "The text asks about when a transfer will arrive or if it has been received.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text describes a transfer that was cancelled or declined.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text asks about fees or limits on topping up.",
+    "intended_class": "top_up_by_card_charge"
+  },
+  {
+    "text": "The text describes an unexpected fee or unrecognized card payment.",
+    "intended_class": "card_payment_not_recognised"
+  },
+  {
+    "text": "The text describes a cash withdrawal that was charged or not recognized.",
+    "intended_class": "cash_withdrawal_charge"
+  },
+  {
+    "text": "The text asks about activating a new card or when it will arrive.",
+    "intended_class": "card_about_to_expire"
+  },
+  {
+    "text": "The text describes a problem with a card not working or being compromised.",
+    "intended_class": "lost_or_stolen_card"
+  },
+  {
+    "text": "The text asks about changing personal details, exchange rates, or supported currencies.",
+    "intended_class": "exchange_via_app"
+  },
+  {
+    "text": "The text describes a lost or stolen phone or a request to verify identity.",
+    "intended_class": "lost_or_stolen_phone"
+  },
+  {
+    "text": "The text asks how long a transfer will take or when it will arrive.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text asks about getting money into the account or sending money to someone.",
+    "intended_class": "top_up_by_bank_transfer_charge"
+  },
+  {
+    "text": "The text asks to cancel a transfer that has been sent.",
+    "intended_class": "cancel_transfer"
+  },
+  {
+    "text": "The text describes a transfer that did not go through.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text asks about topping up using a bank transfer or card.",
+    "intended_class": "topping_up_by_card"
+  },
+  {
+    "text": "The text asks about the maximum amount for a top-up.",
+    "intended_class": "top_up_limits"
+  },
+  {
+    "text": "The text describes a top-up that did not complete.",
+    "intended_class": "pending_top_up"
+  },
+  {
+    "text": "The text describes a fee that was charged for a card payment.",
+    "intended_class": "card_payment_fee_charged"
+  },
+  {
+    "text": "The text asks why a card payment was declined.",
+    "intended_class": "declined_card_payment"
+  },
+  {
+    "text": "The text asks about a fee for withdrawing cash.",
+    "intended_class": "cash_withdrawal_charge"
+  },
+  {
+    "text": "The text describes a cash withdrawal that was not allowed.",
+    "intended_class": "declined_cash_withdrawal"
+  },
+  {
+    "text": "The text asks how to activate a card.",
+    "intended_class": "activate_my_card"
+  },
+  {
+    "text": "The text asks when a new card will arrive.",
+    "intended_class": "card_delivery_estimate"
+  },
+  {
+    "text": "The text asks where the card can be used.",
+    "intended_class": "atm_support"
+  },
+  {
+    "text": "The text describes a card that is not functioning.",
+    "intended_class": "activate_my_card"
+  },
+  {
+    "text": "The text suspects unauthorized use of the card.",
+    "intended_class": "card_payment_not_recognised"
+  },
+  {
+    "text": "The text describes a problem with contactless payments.",
+    "intended_class": "contactless_not_working"
+  },
+  {
+    "text": "The text asks about limits on a disposable card.",
+    "intended_class": "disposable_card_limits"
+  },
+  {
+    "text": "The text asks for a physical card.",
+    "intended_class": "order_physical_card"
+  },
+  {
+    "text": "The text asks how to get a virtual card.",
+    "intended_class": "getting_virtual_card"
+  },
+  {
+    "text": "The text asks to order a physical card.",
+    "intended_class": "order_physical_card"
+  },
+  {
+    "text": "The text asks about card network.",
+    "intended_class": "visa_or_mastercard"
+  },
+  {
+    "text": "The text asks about age requirements.",
+    "intended_class": "age_limit"
+  },
+  {
+    "text": "The text asks to update account information.",
+    "intended_class": "transfer_into_account"
+  },
+  {
+    "text": "The text asks about fees for currency exchange.",
+    "intended_class": "exchange_charge"
+  },
+  {
+    "text": "The text asks about exchanging currencies in the app.",
+    "intended_class": "exchange_via_app"
+  },
+  {
+    "text": "The text asks the reason for identity verification.",
+    "intended_class": "why_verify_identity"
+  },
+  {
+    "text": "The text asks how to complete identity verification.",
+    "intended_class": "verify_my_identity"
+  },
+  {
+    "text": "The text asks about verifying a top-up.",
+    "intended_class": "verify_top_up"
+  },
+  {
+    "text": "The text asks to reset the passcode.",
+    "intended_class": "passcode_forgotten"
+  },
+  {
+    "text": "The text asks about international transfer timing.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text says the balance did not update after a bank transfer.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text asks how to transfer money into the account.",
+    "intended_class": "transfer_into_account"
+  },
+  {
+    "text": "The text says the transfer was declined.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text describes a transfer that failed.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text asks about fees for topping up by bank transfer.",
+    "intended_class": "top_up_by_bank_transfer_charge"
+  },
+  {
+    "text": "The text asks about top-up limits.",
+    "intended_class": "top_up_limits"
+  },
+  {
+    "text": "The text says the top-up failed.",
+    "intended_class": "top_up_failed"
+  },
+  {
+    "text": "The text says a card payment was not recognized.",
+    "intended_class": "declined_card_payment"
+  },
+  {
+    "text": "The text says a card payment is pending.",
+    "intended_class": "pending_card_payment"
+  },
+  {
+    "text": "The text asks about cash withdrawal charges.",
+    "intended_class": "cash_withdrawal_charge"
+  },
+  {
+    "text": "The text says a cash withdrawal was not recognized.",
+    "intended_class": "declined_cash_withdrawal"
+  },
+  {
+    "text": "The text says a cash withdrawal is pending.",
+    "intended_class": "pending_cash_withdrawal"
+  },
+  {
+    "text": "The text asks when the card will arrive.",
+    "intended_class": "card_delivery_estimate"
+  },
+  {
+    "text": "The text asks how to link the card.",
+    "intended_class": "card_arrival"
+  },
+  {
+    "text": "The text says the card is not working.",
+    "intended_class": "virtual_card_not_working"
+  },
+  {
+    "text": "The text says the card was swallowed by an ATM.",
+    "intended_class": "card_swallowed"
+  },
+  {
+    "text": "The text says the PIN is blocked.",
+    "intended_class": "pin_blocked"
+  },
+  {
+    "text": "The text asks about card types.",
+    "intended_class": "visa_or_mastercard"
+  },
+  {
+    "text": "The text asks to edit personal details.",
+    "intended_class": "edit_personal_details"
+  },
+  {
+    "text": "The text asks about exchange charges.",
+    "intended_class": "exchange_charge"
+  },
+  {
+    "text": "The text asks about exchanging via the app.",
+    "intended_class": "exchange_via_app"
+  },
+  {
+    "text": "The text asks how to verify identity.",
+    "intended_class": "verify_my_identity"
+  },
+  {
+    "text": "The remaining classes are now leaves.",
+    "intended_class": "change_pin"
+  },
+  {
+    "text": "The text asks about transfer timing.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text asks to transfer into account.",
+    "intended_class": "transfer_into_account"
+  },
+  {
+    "text": "The text says transfer failed.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text asks about top-up charges.",
+    "intended_class": "top_up_by_card_charge"
+  },
+  {
+    "text": "The text says fee charged.",
+    "intended_class": "cash_withdrawal_charge"
+  },
+  {
+    "text": "The text says payment not recognised.",
+    "intended_class": "cash_withdrawal_not_recognised"
+  },
+  {
+    "text": "The text says payment pending.",
+    "intended_class": "pending_card_payment"
+  },
+  {
+    "text": "The text says withdrawal not recognised.",
+    "intended_class": "pending_cash_withdrawal"
+  },
+  {
+    "text": "The text says withdrawal pending.",
+    "intended_class": "pending_cash_withdrawal"
+  },
+  {
+    "text": "The text says card swallowed.",
+    "intended_class": "card_swallowed"
+  },
+  {
+    "text": "The text says card lost or stolen.",
+    "intended_class": "lost_or_stolen_card"
+  },
+  {
+    "text": "The text asks about disposable limits.",
+    "intended_class": "disposable_card_limits"
+  },
+  {
+    "text": "The text asks to order.",
+    "intended_class": "order_physical_card"
+  },
+  {
+    "text": "The text asks about age.",
+    "intended_class": "age_limit"
+  },
+  {
+    "text": "The text asks to edit details.",
+    "intended_class": "edit_personal_details"
+  },
+  {
+    "text": "The text asks about app exchange.",
+    "intended_class": "contactless_not_working"
+  },
+  {
+    "text": "The text asks why verify.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text asks how to verify.",
+    "intended_class": "verify_my_identity"
+  },
+  {
+    "text": "The text asks about top-up verification.",
+    "intended_class": "verify_top_up"
+  },
+  {
+    "text": "The text is equivalent to asking someone to move money or report a problem with a money movement.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text can be answered with a short imperative like 'activate', 'cancel', or 'verify'.",
+    "intended_class": "activate_my_card"
+  },
+  {
+    "text": "The text can be answered with a number or a limit.",
+    "intended_class": "wrong_amount_of_cash_received"
+  },
+  {
+    "text": "The text asks about a future event or deadline.",
+    "intended_class": "card_about_to_expire"
+  },
+  {
+    "text": "The text asks about the location where something can be used.",
+    "intended_class": "atm_support"
+  },
+  {
+    "text": "The text mentions an ATM or a physical location.",
+    "intended_class": "declined_cash_withdrawal"
+  },
+  {
+    "text": "The text asks about a specific method of adding money.",
+    "intended_class": "top_up_by_bank_transfer_charge"
+  },
+  {
+    "text": "The text asks for a reason or explanation for a failure.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text asks for a justification or reason.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text refers to another person or beneficiary.",
+    "intended_class": "beneficiary_not_allowed"
+  },
+  {
+    "text": "The text asks for a percentage or an amount of money.",
+    "intended_class": "wrong_amount_of_cash_received"
+  },
+  {
+    "text": "The text describes a lost physical object.",
+    "intended_class": "get_physical_card"
+  },
+  {
+    "text": "The text asks about obtaining a new card or item.",
+    "intended_class": "getting_spare_card"
+  },
+  {
+    "text": "The text asks for an additional card.",
+    "intended_class": "visa_or_mastercard"
+  },
+  {
+    "text": "The text asks about a virtual or temporary card.",
+    "intended_class": "getting_virtual_card"
+  },
+  {
+    "text": "The text says a transaction did not complete.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text describes moving money between different accounts.",
+    "intended_class": "transfer_into_account"
+  },
+  {
+    "text": "The text asks about available currency types.",
+    "intended_class": "fiat_currency_support"
+  },
+  {
+    "text": "The text asks to reset or change a secret code.",
+    "intended_class": "change_pin"
+  },
+  {
+    "text": "The text asks to prove the origin of money.",
+    "intended_class": "verify_source_of_funds"
+  },
+  {
+    "text": "The text expresses confusion or difficulty.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text describes a payment that was stopped or reversed.",
+    "intended_class": "request_refund"
+  },
+  {
+    "text": "The text mentions contactless or tap functionality.",
+    "intended_class": "contactless_not_working"
+  },
+  {
+    "text": "The text mentions an ATM taking the card.",
+    "intended_class": "card_swallowed"
+  },
+  {
+    "text": "The text says a charge appeared more than once.",
+    "intended_class": "transaction_charged_twice"
+  },
+  {
+    "text": "The text mentions a recurring payment.",
+    "intended_class": "transaction_charged_twice"
+  },
+  {
+    "text": "The text asks for a refund.",
+    "intended_class": "Refund_not_showing_up"
+  },
+  {
+    "text": "The text mentions a cheque or check.",
+    "intended_class": "balance_not_updated_after_cheque_or_cash_deposit"
+  },
+  {
+    "text": "The text asks to stop a transaction.",
+    "intended_class": "cancel_transfer"
+  },
+  {
+    "text": "The text asks about a specific fee.",
+    "intended_class": "transfer_fee_charged"
+  },
+  {
+    "text": "The text asks about the cost of different top-up methods.",
+    "intended_class": "top_up_by_card_charge"
+  },
+  {
+    "text": "The text asks about a maximum amount.",
+    "intended_class": "top_up_limits"
+  },
+  {
+    "text": "The text mentions an expiry date.",
+    "intended_class": "card_about_to_expire"
+  },
+  {
+    "text": "The text asks for a time estimation.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text asks about using the card in an app.",
+    "intended_class": "card_linking"
+  },
+  {
+    "text": "The text says the PIN is not working.",
+    "intended_class": "pin_blocked"
+  },
+  {
+    "text": "The text asks about card network brands.",
+    "intended_class": "visa_or_mastercard"
+  },
+  {
+    "text": "The text mentions age or a minor.",
+    "intended_class": "age_limit"
+  },
+  {
+    "text": "The text asks to update personal information.",
+    "intended_class": "edit_personal_details"
+  },
+  {
+    "text": "The text asks about the current exchange rate.",
+    "intended_class": "card_payment_wrong_exchange_rate"
+  },
+  {
+    "text": "The text asks which currencies are available.",
+    "intended_class": "fiat_currency_support"
+  },
+  {
+    "text": "The text expresses resistance to verification.",
+    "intended_class": "unable_to_verify_identity"
+  },
+  {
+    "text": "The text asks to verify the top-up transaction.",
+    "intended_class": "verify_top_up"
+  },
+  {
+    "text": "The text mentions a lost phone.",
+    "intended_class": "lost_or_stolen_phone"
+  },
+  {
+    "text": "The text asks to close an account.",
+    "intended_class": "terminate_account"
+  },
+  {
+    "text": "The text asks about receiving money from someone.",
+    "intended_class": "receiving_money"
+  },
+  {
+    "text": "The text describes a pending transaction.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text says the cash received was incorrect.",
+    "intended_class": "wrong_amount_of_cash_received"
+  },
+  {
+    "text": "The text mentions a direct debit or standing order.",
+    "intended_class": "automatic_top_up"
+  },
+  {
+    "text": "The text says there is an additional charge.",
+    "intended_class": "extra_charge_on_statement"
+  },
+  {
+    "text": "The text asks for a refund to be issued.",
+    "intended_class": "request_refund"
+  },
+  {
+    "text": "The text asks to stop a transfer that was already sent.",
+    "intended_class": "cancel_transfer"
+  },
+  {
+    "text": "The text says money was taken but not credited.",
+    "intended_class": "direct_debit_payment_not_recognised"
+  },
+  {
+    "text": "The text questions a charge on the card.",
+    "intended_class": "card_payment_fee_charged"
+  },
+  {
+    "text": "The text says an unauthorized withdrawal occurred.",
+    "intended_class": "compromised_card"
+  },
+  {
+    "text": "The text mentions a specific method of deposit.",
+    "intended_class": "top_up_by_cash_or_cheque"
+  },
+  {
+    "text": "The text says the recipient has not received the money.",
+    "intended_class": "transfer_not_received_by_recipient"
+  },
+  {
+    "text": "The text describes a transfer that is still in process.",
+    "intended_class": "pending_transfer"
+  },
+  {
+    "text": "The text asks to activate the card for the first time.",
+    "intended_class": "activate_my_card"
+  },
+  {
+    "text": "The text says the card will expire soon.",
+    "intended_class": "card_about_to_expire"
+  },
+  {
+    "text": "The text mentions contactless specifically.",
+    "intended_class": "contactless_not_working"
+  },
+  {
+    "text": "The text asks about the number of uses of a disposable card.",
+    "intended_class": "disposable_card_limits"
+  },
+  {
+    "text": "The text asks for a second physical card.",
+    "intended_class": "card_about_to_expire"
+  },
+  {
+    "text": "The text asks which cards are supported.",
+    "intended_class": "supported_cards_and_currencies"
+  },
+  {
+    "text": "The text asks to change the PIN.",
+    "intended_class": "change_pin"
+  },
+  {
+    "text": "The text asks to change name or address.",
+    "intended_class": "edit_personal_details"
+  },
+  {
+    "text": "The text asks if currency exchange is possible in the app.",
+    "intended_class": "exchange_via_app"
+  },
+  {
+    "text": "The text asks to confirm identity.",
+    "intended_class": "verify_my_identity"
+  },
+  {
+    "text": "The text asks to verify a completed top-up.",
+    "intended_class": "verify_top_up"
+  },
+  {
+    "text": "The text says the phone is lost or stolen.",
+    "intended_class": "lost_or_stolen_phone"
+  },
+  {
+    "text": "The text asks how to receive money.",
+    "intended_class": "receiving_money"
+  },
+  {
+    "text": "The text describes a pending top-up.",
+    "intended_class": "pending_top_up"
+  },
+  {
+    "text": "The text says the cash dispensed was wrong.",
+    "intended_class": "wrong_amount_of_cash_received"
+  },
+  {
+    "text": "The text mentions a direct debit transaction.",
+    "intended_class": "reverted_card_payment?"
+  },
+  {
+    "text": "The text says a charge appears that should not be there.",
+    "intended_class": "card_payment_not_recognised"
+  },
+  {
+    "text": "The text asks to initiate a refund process.",
+    "intended_class": "request_refund"
+  },
+  {
+    "text": "The text asks to block a transaction.",
+    "intended_class": "cancel_transfer"
+  },
+  {
+    "text": "The text says a top-up was reversed.",
+    "intended_class": "top_up_reverted"
+  },
+  {
+    "text": "The text says a cash withdrawal was made without authorization.",
+    "intended_class": "age_limit"
+  },
+  {
+    "text": "The text says the balance did not reflect a deposit.",
+    "intended_class": "balance_not_updated_after_cheque_or_cash_deposit"
+  },
+  {
+    "text": "The text asks how long a transfer takes.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text describes a pending transfer.",
+    "intended_class": "pending_transfer"
+  },
+  {
+    "text": "The text asks where the card is accepted.",
+    "intended_class": "card_acceptance"
+  },
+  {
+    "text": "The text says the card may be compromised.",
+    "intended_class": "card_payment_not_recognised"
+  },
+  {
+    "text": "The text mentions contactless payment failure.",
+    "intended_class": "contactless_not_working"
+  },
+  {
+    "text": "The text asks for a spare card.",
+    "intended_class": "getting_spare_card"
+  },
+  {
+    "text": "The text asks which card types are supported.",
+    "intended_class": "visa_or_mastercard"
+  },
+  {
+    "text": "The text asks for the exchange rate.",
+    "intended_class": "exchange_rate"
+  },
+  {
+    "text": "The text asks if exchange is possible in the app.",
+    "intended_class": "exchange_via_app"
+  },
+  {
+    "text": "The text says the phone is lost.",
+    "intended_class": "lost_or_stolen_phone"
+  },
+  {
+    "text": "The text asks to delete the account.",
+    "intended_class": "terminate_account"
+  },
+  {
+    "text": "The text says a top-up is pending.",
+    "intended_class": "pending_top_up"
+  },
+  {
+    "text": "The text says the amount of cash received is wrong.",
+    "intended_class": "wrong_amount_of_cash_received"
+  },
+  {
+    "text": "The text mentions a direct debit.",
+    "intended_class": "reverted_card_payment?"
+  },
+  {
+    "text": "The text says there is an extra charge on statement.",
+    "intended_class": "extra_charge_on_statement"
+  },
+  {
+    "text": "The text questions a card payment fee.",
+    "intended_class": "card_payment_fee_charged"
+  },
+  {
+    "text": "The text says an unauthorized cash withdrawal occurred.",
+    "intended_class": "declined_cash_withdrawal"
+  },
+  {
+    "text": "The text says a transfer is pending.",
+    "intended_class": "pending_transfer"
+  },
+  {
+    "text": "The text says the card is expiring.",
+    "intended_class": "card_about_to_expire"
+  },
+  {
+    "text": "The text asks about card acceptance.",
+    "intended_class": "atm_support"
+  },
+  {
+    "text": "The text suspects the card is compromised.",
+    "intended_class": "card_payment_not_recognised"
+  },
+  {
+    "text": "The text says contactless is not working.",
+    "intended_class": "contactless_not_working"
+  },
+  {
+    "text": "The text asks about supported cards.",
+    "intended_class": "visa_or_mastercard"
+  },
+  {
+    "text": "The text asks about exchange via app.",
+    "intended_class": "exchange_via_app"
+  },
+  {
+    "text": "The text asks why to verify identity.",
+    "intended_class": "why_verify_identity"
+  },
+  {
+    "text": "The text asks to terminate account.",
+    "intended_class": "terminate_account"
+  },
+  {
+    "text": "The text says wrong amount of cash.",
+    "intended_class": "wrong_amount_of_cash_received"
+  },
+  {
+    "text": "The text says top-up was reverted.",
+    "intended_class": "top_up_failed"
+  },
+  {
+    "text": "The text is about a physical or virtual card, its features, or a problem with a card.",
+    "intended_class": "virtual_card_not_working"
+  },
+  {
+    "text": "The text is about moving money into, out of, or between accounts.",
+    "intended_class": "transfer_into_account"
+  },
+  {
+    "text": "The text is about getting a new card, activating a card, or when a card will arrive.",
+    "intended_class": "card_delivery_estimate"
+  },
+  {
+    "text": "The text is about a card payment, a fee charged on a card, or a limit on card usage.",
+    "intended_class": "card_payment_fee_charged"
+  },
+  {
+    "text": "The text is about sending, receiving, or topping up money.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text is about verifying identity, adding beneficiaries, or editing account details.",
+    "intended_class": "edit_personal_details"
+  },
+  {
+    "text": "The text says a card is not working, was lost, stolen, or swallowed.",
+    "intended_class": "lost_or_stolen_phone"
+  },
+  {
+    "text": "The text describes or questions a fee charged on a card transaction.",
+    "intended_class": "card_payment_fee_charged"
+  },
+  {
+    "text": "The text says a card payment was declined, not recognized, or pending.",
+    "intended_class": "pending_card_payment"
+  },
+  {
+    "text": "The text asks about transferring money or when a transfer will arrive.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text asks about topping up an account or limits on top-ups.",
+    "intended_class": "top_up_limits"
+  },
+  {
+    "text": "The text asks to verify identity or says identity cannot be verified.",
+    "intended_class": "verify_my_identity"
+  },
+  {
+    "text": "The text asks about adding beneficiaries, editing personal details, or terminating an account.",
+    "intended_class": "terminate_account"
+  },
+  {
+    "text": "The text asks when a card will arrive or to estimate delivery.",
+    "intended_class": "card_delivery_estimate"
+  },
+  {
+    "text": "The text says a card is not working or a feature like contactless is not working.",
+    "intended_class": "pending_card_payment"
+  },
+  {
+    "text": "The text says a card was lost, stolen, or swallowed by an ATM.",
+    "intended_class": "card_swallowed"
+  },
+  {
+    "text": "The text asks about or reports a fee, charge, or wrong exchange rate.",
+    "intended_class": "card_payment_wrong_exchange_rate"
+  },
+  {
+    "text": "The text says a payment was not recognized or is pending.",
+    "intended_class": "pending_card_payment"
+  },
+  {
+    "text": "The text says a card payment was declined.",
+    "intended_class": "declined_card_payment"
+  },
+  {
+    "text": "The text says a cash withdrawal was not recognized or is pending.",
+    "intended_class": "pending_cash_withdrawal"
+  },
+  {
+    "text": "The text asks when a transfer will arrive or how to receive money.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text says a transfer failed, was declined, or was cancelled.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text asks about methods to top up an account.",
+    "intended_class": "verify_top_up"
+  },
+  {
+    "text": "The text asks about top-up limits, charges, or says a top-up failed.",
+    "intended_class": "top_up_by_card_charge"
+  },
+  {
+    "text": "The text asks to verify identity or why verification is needed.",
+    "intended_class": "why_verify_identity"
+  },
+  {
+    "text": "The text says the identity could not be verified.",
+    "intended_class": "unable_to_verify_identity"
+  },
+  {
+    "text": "The text asks about adding beneficiaries or editing personal details.",
+    "intended_class": "beneficiary_not_allowed"
+  },
+  {
+    "text": "The text asks to track a card that was sent.",
+    "intended_class": "card_arrival"
+  },
+  {
+    "text": "The text asks how long delivery takes or when the card will arrive.",
+    "intended_class": "card_delivery_estimate"
+  },
+  {
+    "text": "The text says a physical card is not working.",
+    "intended_class": "card_not_working"
+  },
+  {
+    "text": "The text says contactless or the virtual card is not working.",
+    "intended_class": "virtual_card_not_working"
+  },
+  {
+    "text": "The text asks about or reports a fee charged on a card payment.",
+    "intended_class": "card_payment_fee_charged"
+  },
+  {
+    "text": "The text says the exchange rate on a card payment is wrong.",
+    "intended_class": "card_payment_wrong_exchange_rate"
+  },
+  {
+    "text": "The text says a cash withdrawal was declined.",
+    "intended_class": "declined_cash_withdrawal"
+  },
+  {
+    "text": "The text says a transfer was declined or asks to cancel a transfer.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text asks about topping up by card.",
+    "intended_class": "top_up_by_card_charge"
+  },
+  {
+    "text": "The text asks about topping up by bank transfer, cash, or cheque.",
+    "intended_class": "top_up_by_cash_or_cheque"
+  },
+  {
+    "text": "The text asks about limits on top-ups.",
+    "intended_class": "top_up_limits"
+  },
+  {
+    "text": "The text says a top-up failed or was reverted.",
+    "intended_class": "top_up_reverted"
+  },
+  {
+    "text": "The text asks to verify the source of funds.",
+    "intended_class": "verify_source_of_funds"
+  },
+  {
+    "text": "The text asks about or reports a problem with beneficiaries.",
+    "intended_class": "card_swallowed"
+  },
+  {
+    "text": "The text says the passcode is forgotten or the PIN is blocked.",
+    "intended_class": "pin_blocked"
+  },
+  {
+    "text": "The text is about obtaining a new card or a new feature.",
+    "intended_class": "getting_virtual_card"
+  },
+  {
+    "text": "The text reports a problem, failure, or unexpected issue.",
+    "intended_class": "failed_transfer"
+  },
+  {
+    "text": "The text is equivalent to asking someone to perform an action.",
+    "intended_class": "activate_my_card"
+  },
+  {
+    "text": "The text can be answered with an explanation or reason.",
+    "intended_class": "declined_transfer"
+  },
+  {
+    "text": "The text can be answered with a time, date, or duration.",
+    "intended_class": "transfer_timing"
+  },
+  {
+    "text": "The text can be answered with 'yes' or 'no'.",
+    "intended_class": "apple_pay_or_google_pay"
+  },
+  {
+    "text": "The text asks about a limit, maximum, or restriction.",
+    "intended_class": "top_up_limits"
+  },
+  {
+    "text": "The text asks about a fee, charge, or cost.",
+    "intended_class": "cash_withdrawal_charge"
+  },
+  {
+    "text": "The text mentions a specific location, country, or ATM.",
+    "intended_class": "atm_support"
+  },
+  {
+    "text": "The text mentions a specific payment method like credit card or bank transfer.",
+    "intended_class": "balance_not_updated_after_bank_transfer"
+  },
+  {
+    "text": "The text expresses concern about security, fraud, or unauthorized access.",
+    "intended_class": "compromised_card"
+  },
+  {
+    "text": "The text asks about the process or steps to accomplish something.",
+    "intended_class": "transfer_into_account"
+  },
+  {
+    "text": "The text expresses confusion or a lack of understanding.",
+    "intended_class": "declined_card_payment"
+  },
+  {
+    "text": "The text asks for a status or update on a pending transaction.",
+    "intended_class": "pending_card_payment"
+  },
+  {
+    "text": "The text mentions a specific card type: virtual, disposable, or physical.",
+    "intended_class": "get_disposable_virtual_card"
+  },
+  {
+    "text": "The text asks about currencies, exchange rates, or converting money.",
+    "intended_class": "exchange_charge"
+  },
+  {
+    "text": "The text asks about supported countries or regions.",
+    "intended_class": "country_support"
+  }
+]

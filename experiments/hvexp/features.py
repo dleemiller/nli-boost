@@ -8,6 +8,7 @@ so the whole seed/size sweep is free CPU after one GPU pass.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -17,7 +18,11 @@ from hypothesis_vectorizer.config import EncoderConfig
 from hypothesis_vectorizer.costs import CostTracker
 from hypothesis_vectorizer.encoder import EntailmentScorer
 
-DEFAULT_CACHE = Path(__file__).resolve().parents[2] / "cache" / "nli_scores.sqlite"
+# The workspace is a 9P-mounted ZFS share where SQLite's per-lookup RPCs dominate a large-pool
+# scoring pass. Point HV_CACHE_DIR at a LOCAL filesystem (e.g. /tmp) to keep cache I/O off 9P;
+# defaults to the repo `cache/` for portability.
+_CACHE_DIR = Path(os.environ.get("HV_CACHE_DIR", Path(__file__).resolve().parents[2] / "cache"))
+DEFAULT_CACHE = _CACHE_DIR / "nli_scores.sqlite"
 
 
 class NLIFeaturizer:

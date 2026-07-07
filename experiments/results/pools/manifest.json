@@ -1,25 +1,25 @@
 {
-  "run_id": "trec_gen_evolved",
-  "created_utc": "2026-07-06T19:04:14Z",
-  "git_commit": "28f8432-dirty",
+  "run_id": "banking77_gen256",
+  "created_utc": "2026-07-07T02:02:19Z",
+  "git_commit": "aec1480-dirty",
   "config": {
-    "dataset": "trec",
-    "n": 64,
-    "sample_per_class": 50,
+    "dataset": "banking77",
+    "n": 256,
+    "sample_per_class": 3,
     "seed": 7,
     "encoder": "dleemiller/finecat-nli-l",
     "device": "cuda",
     "lm": "openrouter/deepseek/deepseek-v4-flash",
     "dedup": "sts",
-    "evolve": true,
+    "evolve": false,
     "tag": true,
-    "out": "experiments/results/pools/trec_gen_evolved.json"
+    "out": "experiments/results/pools/banking77_gen256.json"
   },
-  "config_hash": "32e192d20a4b",
+  "config_hash": "c5e35fea89a0",
   "seed": 7,
-  "dataset": "trec",
+  "dataset": "banking77",
   "encoder": "dleemiller/finecat-nli-l",
-  "pool_id": "trec_gen_evolved",
+  "pool_id": "banking77_gen256",
   "libraries": {
     "python": "3.13.9",
     "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.39",
@@ -32,9 +32,9 @@
     "datasets": "5.0.0",
     "cuda": "NVIDIA GeForce RTX 5090"
   },
-  "n_generated": 62,
-  "gen_seconds": 549.4,
-  "sample_texts": 300,
+  "n_generated": 256,
+  "gen_seconds": 838.4,
+  "sample_texts": 231,
   "lm": "openrouter/deepseek/deepseek-v4-flash",
-  "evolve": true
+  "evolve": false
 }

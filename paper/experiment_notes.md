@@ -292,4 +292,23 @@ datasets now show **three distinct patterns** — the honest generality story:
 content, so the fixed test matrix is scored once per sweep instead of re-read from SQLite on every
 (k, seed). Cut the Banking77 sweep from a ~55-min projection to a few minutes (warm stays cached).
 
+### RESULT: Banking77 pool-scaling test (2026-07-07) — hypothesis CONFIRMED
+
+Generated a 256-hyp Banking77 pool (`banking77_gen256.json`, DeepSeek-v4-flash, 3/class; covers
+**76/77 classes**) and re-ran the curve (`lc_banking77_scaling_l`, 5 seeds, shots 1–20). Scaling
+24→256 hypotheses **doubled** low-N accuracy (0.31→0.53 at 1/class) and **closed almost the entire
+gap to dense embeddings** — `hv_gen256_logreg` tracks MiniLM within ~0.004–0.03 at every budget
+(0.530 vs 0.534 @1; 0.859 vs 0.886 @20) and beats TF-IDF throughout. Table `banking77_scaling_*`,
+figure `banking77_scaling_accuracy.pdf`. **Banking77's earlier loss was a thin-pool artifact, not a
+method limit — the pool must scale with the label space.** The prior head improved (0.231→0.392)
+but the learned head is where the large pool pays off (256 auto-tagged hyps → 77 classes is noisy
+for pure averaging).
+
+**Infra fix — 9P filesystem / cache location.** The workspace is a 9P-mounted ZFS share; SQLite
+per-lookup RPCs stalled the all-miss gen256 warm (GPU sat at 0% in `D`/`p9_client_rpc`). Made the
+NLI cache path env-configurable (`HV_CACHE_DIR`, `experiments/hvexp/features.py`) and pointed runs
+at local ext `/tmp/hv_cache` — GPU went to 99% immediately (1.88M pairs scored ~1090/s). **Run
+future scoring passes with `HV_CACHE_DIR=/tmp/hv_cache`.** The canonical cache remains committed
+under `cache/` (gitignored) — copy it to the local dir before a big run.
+
 _(Further phases appended as they run.)_
