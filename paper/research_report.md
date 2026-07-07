@@ -171,6 +171,24 @@ where the large pool pays off.)
 | Broad topics | AG News | zero-shot NLI / HV prior | NLI prior near-ceiling; learned head adds little |
 | Fine-grained many-class | Banking77 | dense embeddings | thin 24-hyp pool loses; **256-hyp generated pool reaches embedding parity** (Table 5c) |
 
+## Table 5d — RQ4: pool-size scaling (how many hypotheses?)
+
+Subsampling a generated pool to sizes 8…256 (RF head, 20 examples/class, 5 seeds; figure
+`poolsize_scaling.pdf`). Directly answers "how many hypotheses do you need?" — and the answer
+**scales with the label space**.
+
+| # hypotheses | 8 | 16 | 32 | 64 | 128 | 192 | 256 |
+|---|---|---|---|---|---|---|---|
+| **TREC-6** (6 classes) | .622 | .714 | .824 | .829 | .877 | .884 | .877 |
+| **Banking77** (77 classes) | .543 | .678 | .733 | .780 | .831 | .841 | .845 |
+
+**Read:** on the small taxonomy (TREC) accuracy **saturates by ~32–64 hypotheses** — beyond that,
+extra probes barely move it (0.824 at 32 vs 0.877 at 256), consistent with the method's "≈30 useful
+semantic directions" finding. On the 77-way task, accuracy **keeps climbing to ~128–192** before
+plateauing near 256 (0.54→0.85). The useful pool size grows with the number of classes / semantic
+complexity — so pool size is a task-dependent knob, and the earlier Banking77 deficit was simply an
+under-sized pool.
+
 ## Table 6 — RQ5: CFPB text+tabular marginal value
 
 Monetary-relief prediction on CFPB consumer complaints (narrative + Product/Company/State/channel

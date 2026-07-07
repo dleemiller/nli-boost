@@ -1,0 +1,1026 @@
+[
+  {
+    "text": "The text asks for the identity of a specific person, place, or thing.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be answered with a proper name or a specific entity.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is equivalent to asking someone to name a specific entity.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for the meaning of a term, a definition, or a numeric value.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a person or group of people.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be answered with a person's name.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text contains the word 'who'.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a place or a thing.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be answered with a location or an object.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the meaning of an abbreviation or acronym.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text contains an abbreviation in all caps.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text is equivalent to asking 'what does X stand for?'.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a definition, explanation, or numeric value.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text is equivalent to asking someone to describe or quantify something.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a location or place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be answered with a city, country, or other geographic entity.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text contains words like 'where', 'city', 'state', 'country'.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a thing, object, animal, or concept.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be answered with a named entity that is not a person or place.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a definition, description, or explanation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text contains 'why' or 'how' or 'what is' in a broad sense.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text is equivalent to asking someone to explain the meaning of something.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a number, count, date, or amount.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text contains words like 'how many' or 'how much'.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a specific thing or entity.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text begins with the word 'Who'.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text begins with the word 'Where'.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text begins with 'What' but not followed by 'is' or 'does' for definitions.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text begins with 'What is' or 'What does' in a broad sense.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text begins with 'Why' or 'How'.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text begins with 'How many' or 'How much'.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text includes the phrase 'stand for'.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text can be answered with a proper name of a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be answered with a number or date.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text requires a full-sentence explanation or definition.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text is equivalent to asking someone to name a specific thing.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is equivalent to asking someone to identify a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text is equivalent to asking someone to locate a place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is equivalent to asking someone to give a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text is equivalent to asking someone to expand an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a specific named entity rather than a general definition.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a measurable quantity rather than a qualitative explanation.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text contains a proper name of a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text contains a geographic place name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a specific number or a definition rather than a named entity.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The answer to the text is not a proper name of a person, place, or thing.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text is about obtaining a piece of information that is not a named entity.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be answered with a short phrase that is not a proper name.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text does not require identifying a specific individual or location.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a concept, a quantity, or the meaning of a term.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The answer to the text is a description or a numeric value.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text seeks a factual answer that is not a named entity.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text's answer is a definition or a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text's answer is a proper name of a person, place, or thing.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a specific named entity.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text requires identifying an individual item such as a person, place, or object.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The answer to the text is a proper name.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text is about a specific person, place, or thing.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be answered with a proper name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text's answer is a specific entity.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is equivalent to asking someone to name a person, place, or thing.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for the identity of a particular entity.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text requests a comprehensive explanation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text requires a multi-sentence answer.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the reason or cause of something.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text is equivalent to asking someone to define a concept.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text has a question that starts with 'Why' or 'How'.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a descriptive answer.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text is about understanding a process or phenomenon.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a method or manner.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text can be answered with a paragraph.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a specific abbreviation or a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text includes a sequence of uppercase letters.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a numeric value.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text can be answered with a single word or number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text is equivalent to asking someone to expand an acronym or give a count.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a short form or a quantity.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a date or an amount.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text's answer is a number or an acronym expansion.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text is about a specific code or a measurement.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text seeks information about a human or a geographic location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is about a specific human or a place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The answer to the text is a person's name or a place name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text contains a proper name of a person or a geographic name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text's answer is a proper name of a person or a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a named entity that is a person or a place.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text uses a question word that refers to a person or a place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text requires identifying a human or a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text's answer is a specific person or a specific place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a thing that is not a person or place.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text's answer is a named entity such as an object, event, or concept.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is about a specific item, animal, or phenomenon.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a thing rather than a person or location.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text can be answered with a thing's name.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to identify a particular entity.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a specific named entity excluding persons and places.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text's answer is a general entity.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text is about a particular object or event.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text does not involve a person or a place.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text includes a grouping of uppercase letters that likely represents an abbreviation.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for the expansion of an acronym.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text includes the word 'acronym' or 'abbreviation'.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text is equivalent to asking someone to spell out an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the meaning of a short form.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text's answer is an abbreviation expansion.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the meaning of a set of letters.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text is about a specific code or initialism.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text includes a period or dot between letters indicating an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a few letters that represent something.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a numeric value such as a count, date, or amount.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text includes a number or a date.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a quantity or measurement.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text's answer is a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text uses a phrase that asks for a quantity.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a specific amount or percentage.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text is about a numerical fact.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text can be answered with a digit.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text requests a date or age.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text is about a specific human being or an organization.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text is about a specific individual or organization.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The answer to the text is a human name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text uses a pronoun that refers to a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to name a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person who is associated with an action.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text's answer is a person's name.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text is about a character or a famous person.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text seeks the identity of a human being.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text has a question that refers to a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text seeks information about a geographical area.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is about a specific geographic location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The answer to the text is a place name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text includes a question word that indicates a place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a place that is related to an event.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text's answer is a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text is about a country, city, or landmark.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text seeks the name of a place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text has a question that refers to a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the full form of an acronym.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text includes the word 'mean' in the context of an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks what a set of letters represents.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a specific object or item.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text is about a particular event or occurrence.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a color or an animal.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a product or brand name.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a definition of a term.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the reason behind something.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a method or procedure.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks how something works or is done.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks about a famous person or celebrity.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks about a group or organization.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks who performed an action.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a city or town.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a country or nation.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a landmark or building.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a count of something.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a date or year.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for an amount or quantity.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a percentage or ratio.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text is equivalent to asking someone to provide a specific piece of information.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to expand an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to name a thing.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to explain or define something.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to identify a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to locate a place.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be rephrased as an imperative to give a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the meaning of a word or phrase.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a list or enumeration.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for an example of something.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a category or type.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a comparison between two things.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks about the cause or effect of something.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a description of a process.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a person's opinion or belief.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a historical fact.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a scientific fact.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a mathematical value.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a speed or rate.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a distance or size.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for a weight or mass.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a temperature.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a time duration.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a frequency.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a rank or position.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a price or cost.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the title of a book, movie, or song.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a recipe or instruction.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the definition of a scientific term.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the definition of a legal term.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for the definition of a medical term.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a synonym of a word.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for an antonym of a word.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a translation of a word or phrase.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the spelling of a word.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the pronunciation of a word.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a person's age.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's height or weight.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's nationality.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a person's occupation.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's date of birth.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's place of birth.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a person's date of death.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for the coordinates of a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the population of a location.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the area of a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the climate of a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the history of a location.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the culture of a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the color of a thing.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for the shape of a thing.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for the size of a thing.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the material of a thing.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for the purpose of a thing.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the origin of a thing.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for the value of a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the unit of a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the range of a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the precision of a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the format of a number.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the significance of a number.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the definition of a concept.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a description of a phenomenon.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for an explanation of a theory.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for the reason for a rule.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a method of calculation.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a way to achieve something.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a person's relationship to another.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's role in an event.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's contribution to something.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for the distance between two locations.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the direction from one location to another.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the elevation of a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the function of a thing.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the composition of a thing.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for the classification of a thing.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the average of a set of numbers.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the median of a set of numbers.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the mode of a set of numbers.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for the definition of a slang term.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a description of a custom.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for an explanation of a tradition.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for a person's nickname.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a person's alias.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a location's nickname.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text asks for the brand of a thing.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for the model of a thing.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for the version of a thing.",
+    "intended_class": "DESC"
+  },
+  {
+    "text": "The text asks for the percentage of something.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a specific proper name as the answer.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a definition or explanation of a term or abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a person or a place.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks about the meaning of an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks about a person.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text contains a sequence of uppercase letters that is the subject of the question.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text can be answered with a multi-sentence description or explanation.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a value that can be expressed as a pure number without units.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks about a specific object, animal, event, or concept that is not a person or location.",
+    "intended_class": "ENTY"
+  }
+]

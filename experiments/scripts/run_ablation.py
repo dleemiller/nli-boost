@@ -48,9 +48,13 @@ ALL_AXES = ["score_mode", "pool_size", "head", "encoder"]
 def load_pool(dataset: str, pool_json: pathlib.Path | None) -> tuple[list[str], str]:
     """(pool texts, pool_id). Either an LM/JSON pool or the hand-written expert pool."""
     if pool_json:
-        pool = json.loads(pathlib.Path(pool_json).read_text())
-        if not (isinstance(pool, list) and all(isinstance(h, str) for h in pool)):
-            raise ValueError(f"--pool-json {pool_json} must be a JSON list of strings")
+        obj = json.loads(pathlib.Path(pool_json).read_text())
+        if obj and isinstance(obj[0], dict):  # [{"text":..,"intended_class":..}] -> texts
+            pool = [h["text"] for h in obj]
+        elif isinstance(obj, list) and all(isinstance(h, str) for h in obj):
+            pool = obj
+        else:
+            raise ValueError(f"--pool-json {pool_json} must be a JSON list of strings or {{text,...}}")
         return pool, pathlib.Path(pool_json).stem
     pool, _tags = hypotheses.expert_pool(dataset)
     return pool, "expert"
@@ -78,9 +82,11 @@ def variants_for_axis(axis: str, *, pool: list[str], featurizers: dict[str, NLIF
                                  score_mode="entail_contradict", seed=seed)))
     elif axis == "pool_size":
         fz = featurizers[primary]
+        # single RF head (the paper's flexible-head line): the pool-size scaling curve should
+        # vary the pool, not the head, and a CV grid on many classes is needlessly slow here.
         for k in [k for k in pool_sizes if k <= len(pool)]:
             out.append((str(k), primary,
-                        S.HVHead(n_classes, pool[:k], fz, head="auto",
+                        S.HVHead(n_classes, pool[:k], fz, head="rf",
                                  score_mode="entail_contradict", seed=seed)))
     elif axis == "encoder":
         for enc in encoders:

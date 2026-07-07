@@ -336,4 +336,20 @@ specific financial loss"). This is the applied/regulatory claim, confirmed.
 Caveats: balanced/random (AUC ~0.91–0.94) is NOT the temporal natural-rate benchmark (0.78/0.69).
 Pool is static; the `--evolve` marginal-over-tabular pruning path is the next refinement.
 
+## Phase 6 — RQ4 pool-size ablation (2026-07-07)
+
+Subsampled generated pools to 8…256 (RF head, 20/class, 5 seeds; `abl_{trec,banking77}_poolsize`,
+figure `poolsize_scaling.pdf`). Accuracy vs pool size:
+
+| # hyps | 8 | 16 | 32 | 64 | 128 | 192 | 256 |
+|---|---|---|---|---|---|---|---|
+| TREC-6 (6 cls) | .622 | .714 | .824 | .829 | .877 | .884 | .877 |
+| Banking77 (77 cls) | .543 | .678 | .733 | .780 | .831 | .841 | .845 |
+
+**The useful pool size scales with the label space.** TREC saturates by ~32–64 (≈30 useful
+directions, as METHOD.md found); Banking77 keeps climbing to ~128–192 before plateauing near 256.
+Confirms pool size is a task-dependent knob and that Banking77's earlier loss was an under-sized
+pool, not a method limit. (Used a single RF head, not the CV grid — the grid on 77 classes was
+~2 min/fit; RF is ~1s and is the paper's flexible-head line anyway.)
+
 _(Further phases appended as they run.)_
