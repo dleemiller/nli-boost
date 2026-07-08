@@ -2074,3 +2074,15 @@ PRE-REGISTERED: prior seed studies measured tiny seed deltas (ag_news 0.0015, ss
 success = seed-17 accuracy in [0.955, 0.968] and pool size 18-26 with semantically similar (not
 identical) grown hypotheses -> the result is the METHOD's, not the seed's. A miss below 0.95 means
 the v1/v2 gap was luck and the claim gets retracted to "0.948-0.962 depending on seed".
+
+## 2026-07-08 — SEED-17 VERDICT: MISSED the band; headline softened (honest protocol)
+trec_tree_scratch_s17: 0.950 acc / 0.9324 f1 / 0.2997 logloss @ 19 hyps. Pre-registered success was
+[0.955, 0.968]: MISS (at the 0.95 retract boundary, not below it). Pool size 19 in band; blacklist
+worked (stubborn DESC/ENTY leaf skipped). CONCLUSION: from-scratch growth has FULL-PIPELINE seed
+variance ~10x the old method's head-only variance (spread 0.950-0.962 = 0.012 vs ag_news 0.0015) —
+the LM rollouts + seed pool draw matter. HEADLINE RETRACTED per pre-registration: not "beats
+baseline"; now "PARITY with the 32-hyp baseline (2-seed mean 0.956 +/- 0.006 vs 0.960) at ~40%
+fewer hypotheses". The compression story survives; the accuracy-win story does not (yet).
+LAUNCHING seed 27 to disambiguate which seed is the outlier and report a 3-seed mean+/-std.
+PRE-REGISTERED: expect acc in [0.945, 0.965], pool 17-26; deliverable = 3-seed mean+/-std as the
+method's reported number.

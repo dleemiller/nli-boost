@@ -1,0 +1,32 @@
+# FROM-SCRATCH tree growth (the method's designed use, NOTES 2026-07-08): generate a small seed
+# pool (8), then grow by tree-guided LLM proposals. v3 polished a mature 32-pool (accuracy flat);
+# this decides whether organic growth is where the method earns its keep.
+run_name: trec_tree_scratch_s27
+seed: 27
+
+data:
+  name: trec
+  train_size: 5452
+  val_size: 0
+  test_size: 2000
+
+encoder:
+  model: dleemiller/finecat-nli-l
+  batch_size: 64  # polite batch: sharing the GPU with Lee's ASR training
+  features: full
+
+lm:
+  model: openrouter/deepseek/deepseek-v4-flash
+
+pool:
+  size: 8  # small seed; the tree loop does the growing
+  method: tree
+  tree:
+    rounds: 27  # cap: 8 seed + 27 grown = 35, matching v3's final pool size
+    refine_attempts: 4
+    strategy: best_of_n
+    leaf_shots: 24
+    leaf_min_samples: 20
+    min_impurity_decrease: 0.002
+    min_samples_leaf: 10
+    patience: 3
