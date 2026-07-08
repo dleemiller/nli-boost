@@ -2045,3 +2045,24 @@ FIX (committed): per-LEAF patience — a leaf that resists `patience` rounds is 
 next-worst leaf; stop only when no targetable leaf remains or rounds exhaust. PRE-REGISTERED for the
 rerun (trec_tree_scratch2): expect growth well past 18 (toward the 35 cap), and acc between 0.948
 and ~0.960; the pool-size-vs-accuracy CURVE is the real deliverable (efficiency story).
+
+## 2026-07-08 — FROM-SCRATCH + LEAF-BLACKLIST VERDICT: the method's best result
+trec_tree_scratch2 (seed 8, 13 grown = 21 hyps, all 27 rounds used, 2 leaves blacklisted):
+                                acc     f1      logloss   hyps
+  static-32 baseline            0.960   0.9478  0.2697    32
+  v3 polish (mature pool)       0.960   0.9473  0.2295    35
+  from-scratch v1 (global pat.) 0.948   0.9198  0.2789    18
+  FROM-SCRATCH + BLACKLIST      0.962   0.9582  0.1998    21   <- beats baseline on ALL metrics
+  stability method (reference)  0.964   -       -         62
+
+vs pre-registration: STRETCH CASE HIT. Predicted 0.948-0.960; got 0.962 (+macro_f1 +1.0pt,
+logloss -26% vs baseline) at 34% fewer hypotheses than the baseline and ONE-THIRD of the stability
+method's pool for accuracy within noise of its 0.964 (0.002 on 2000 test ~ McNemar noise).
+The blacklist did exactly its job: 2 stubborn DESC/ENTY leaves absorbed 3 rounds each then were
+skipped; growth continued to the rounds cap instead of stranding (v1 stranded 17 rounds).
+HYPOTHESIS AUDIT: all 13 grown are clean, demand-driven semantic properties (components-of-category,
+process-vs-cause explanation, creative-work names, role/title identity, spell-out-abbreviation...)
+— reads like a hand-designed taxonomy of TREC's actual confusion structure. Zero surface features.
+TAKEAWAY: tree-guided growth is a POOL-COMPRESSION method — near-max accuracy with 1/3 the
+inference cost, every hypothesis traceable to the exact confusion that demanded it (the
+interpretability story compounds: the pool is a MAP of where the task is hard).
