@@ -228,3 +228,7 @@ models_*/
 
 # CFPB raw data — publicly regenerable via experiments/scripts/prep_cfpb.py (keep repo light)
 experiments/results/cfpb/*.csv
+
+# run-status daemon runtime state (machine-specific / transient)
+experiments/results/logs/status_daemon.pid
+experiments/results/logs/watch_roots.txt

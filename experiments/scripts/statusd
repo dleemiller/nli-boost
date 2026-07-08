@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# statusd — control the hypothesis-vectorizer run-status daemon (see run_status_daemon.py).
+#
+# Repo tooling to track running experiment/agent jobs on one board. Prefers a systemd --user
+# service (survives logout/reboot when lingering is on); falls back to a plain nohup'd process
+# (with the daemon's own pidfile) on boxes without a user systemd bus (containers, CI).
+#
+#   ./experiments/scripts/statusd install     # set up + start the service (idempotent)
+#   ./experiments/scripts/statusd start|stop|restart|status
+#   ./experiments/scripts/statusd board        # tail the status board (the run table)
+#   ./experiments/scripts/statusd logs         # tail the daemon's own service logs
+#   ./experiments/scripts/statusd uninstall    # stop + remove the service
+#
+# Watch roots: edit experiments/results/logs/watch_roots.txt (one path per line, live-reloaded).
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PY="$REPO/.venv/bin/python"; [ -x "$PY" ] || PY="$(command -v python3)"
+DAEMON="$SCRIPT_DIR/run_status_daemon.py"
+BOARD="$REPO/experiments/results/logs/run_status.log"
+PIDFILE="$REPO/experiments/results/logs/status_daemon.pid"
+UNIT="hv-status"
+UNIT_FILE="$HOME/.config/systemd/user/${UNIT}.service"
+
+# systemd --user usable on this box?
+use_systemd() { [ -n "${XDG_RUNTIME_DIR:-}" ] && systemctl --user show-environment >/dev/null 2>&1; }
+
+write_unit() {
+  mkdir -p "$(dirname "$UNIT_FILE")"
+  cat > "$UNIT_FILE" <<UNIT
+[Unit]
+Description=hypothesis-vectorizer run status daemon
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=$REPO
+Environment=PATH=/usr/bin:/bin:/usr/local/bin
+ExecStart=$PY $DAEMON --interval 20
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target
+UNIT
+}
+
+nohup_running() { [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
+
+case "${1:-help}" in
+  install)
+    if use_systemd; then
+      write_unit; systemctl --user daemon-reload; systemctl --user enable --now "$UNIT"
+      echo "installed + started (systemd --user). board: $BOARD"
+    else
+      echo "no systemd --user; starting via nohup instead"; exec "$0" start
+    fi ;;
+  start)
+    if use_systemd; then systemctl --user start "$UNIT"; echo "started (systemd)"
+    elif nohup_running; then echo "already running (pid $(cat "$PIDFILE"))"
+    else nohup "$PY" "$DAEMON" >/dev/null 2>&1 & echo "started (nohup pid $!)"; fi ;;
+  stop)
+    if use_systemd && systemctl --user cat "$UNIT" >/dev/null 2>&1; then systemctl --user stop "$UNIT"; echo "stopped (systemd)"
+    elif nohup_running; then kill -TERM "$(cat "$PIDFILE")"; echo "stopped (nohup)"
+    else echo "not running"; fi ;;
+  restart)
+    if use_systemd; then systemctl --user restart "$UNIT"; echo "restarted (systemd)"
+    else "$0" stop; sleep 2; "$0" start; fi ;;
+  status)
+    if use_systemd && systemctl --user cat "$UNIT" >/dev/null 2>&1; then systemctl --user status "$UNIT" --no-pager | head -12
+    elif nohup_running; then echo "running (nohup pid $(cat "$PIDFILE"))"
+    else echo "not running"; fi ;;
+  board) exec tail -f "$BOARD" ;;
+  logs)
+    if use_systemd; then exec journalctl --user -u "$UNIT" -f
+    else echo "no systemd; board is at $BOARD"; exec tail -f "$BOARD"; fi ;;
+  uninstall)
+    if use_systemd && systemctl --user cat "$UNIT" >/dev/null 2>&1; then
+      systemctl --user disable --now "$UNIT" 2>/dev/null || true; rm -f "$UNIT_FILE"; systemctl --user daemon-reload
+      echo "uninstalled (systemd)"
+    elif nohup_running; then kill -TERM "$(cat "$PIDFILE")"; echo "stopped (nohup)"
+    else echo "nothing to uninstall"; fi ;;
+  *)
+    grep -E '^#( |$)' "$0" | sed -E 's/^# ?//' | sed '/^!/d'; ;;
+esac
