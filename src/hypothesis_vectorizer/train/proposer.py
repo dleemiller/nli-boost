@@ -102,6 +102,36 @@ class RefillPool(dspy.Signature):
     hypotheses: list[Hypothesis] = dspy.OutputField()
 
 
+class SplitLeaf(dspy.Signature):
+    __doc__ = (
+        "A decision tree over text classes is stuck: ONE leaf still mixes several classes it "
+        "cannot tell apart (the `confused_examples`, with their true labels). Write ONE new NLI "
+        "hypothesis whose ENTAILMENT SCORE would best SEPARATE those classes — high for some of the "
+        "confused classes and low for the others. Study what the examples of each class share that "
+        "the OTHER classes in this leaf do NOT, and name that distinguishing property. The tree "
+        "already handles everything ABOVE this leaf, so do not restate coarse distinctions; target "
+        "exactly what still mixes here. Return a single statement. " + _RULES
+    )
+
+    task: str = dspy.InputField(desc="the classification task")
+    class_definitions: list[str] = dspy.InputField(desc="one-line definition per class")
+    confused_examples: list[str] = dspy.InputField(desc="'[class] text' samples mixed in this leaf")
+    classes_present: list[str] = dspy.InputField(desc="the classes in this leaf, with example counts")
+    avoid: list[str] = dspy.InputField(desc="hypotheses already in the pool; do not repeat or paraphrase")
+    hypothesis: str = dspy.OutputField(desc="a single declarative sentence about 'the text'")
+
+
+class _SplitModule(dspy.Module):
+    """Bare module wrapped by dspy.Refine/BestOfN — one SplitLeaf prediction per call."""
+
+    def __init__(self):
+        super().__init__()
+        self.predict = dspy.Predict(SplitLeaf)
+
+    def forward(self, **kwargs):
+        return self.predict(**kwargs)
+
+
 def _flatten(result) -> list[str]:
     """Collect statements from a decision-tree output (`tree` of SplitNodes) and/or a flat
     `hypotheses` list — GeneratePool returns both, RefillPool only the flat list."""
@@ -173,6 +203,42 @@ class Proposer:
                 n=n,
             ),
         )
+
+    def split_leaf(
+        self,
+        task: str,
+        class_definitions: list[str],
+        confused_examples: list[str],
+        classes_present: list[str],
+        avoid: list[str],
+        reward_fn,
+        attempts: int = 4,
+        strategy: str = "refine",
+    ) -> tuple[str | None, float]:
+        """Propose ONE hypothesis that splits a confused tree leaf, choosing the best of up to
+        `attempts` LM samples by `reward_fn(inputs, prediction) -> float` (info gain, supplied by
+        tree_evolve). `strategy`: 'refine' (dspy.Refine — feeds the reward back as advice between
+        attempts) or 'best_of_n' (dspy.BestOfN — independent samples). Never crashes a fit."""
+        inputs = dict(
+            task=task,
+            class_definitions=class_definitions,
+            confused_examples=confused_examples,
+            classes_present=classes_present,
+            avoid=avoid,
+        )
+        cls = dspy.BestOfN if strategy == "best_of_n" else dspy.Refine
+        n_before = len(self._lm.history)
+        try:
+            runner = cls(module=_SplitModule(), N=attempts, reward_fn=reward_fn, threshold=1.0)
+            with dspy.context(lm=self._lm):
+                pred = runner(**inputs)
+            hyp = (getattr(pred, "hypothesis", "") or "").strip()
+            return (hyp or None), (float(reward_fn(inputs, pred)) if hyp else 0.0)
+        except Exception as e:  # LM/parse pathologies must not kill a fit
+            print(f"    split_leaf failed ({type(e).__name__})", flush=True)
+            return None, 0.0
+        finally:
+            self._track(self._lm, n_before)
 
     # -- internals -----------------------------------------------------------
 

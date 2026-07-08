@@ -92,10 +92,18 @@ def run(cfg: RunConfig, scorer=None, proposer=None, deduper=None, bundle=None) -
         if fixed:
             blocks.append(scorer.features(bundle.train_texts, fixed))
         baseline = np.concatenate(blocks, axis=1) if blocks else None
-        _phase(f"evolving (cap {cfg.pool.rounds} rounds, patience {cfg.pool.patience})")
-        pool, history = evolve(
-            bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, baseline_train=baseline
-        )
+        if cfg.pool.method == "tree":
+            from .tree_evolve import tree_evolve
+
+            _phase(f"tree-evolving (up to {cfg.pool.tree.rounds} rounds, {cfg.pool.tree.strategy})")
+            pool, history = tree_evolve(
+                bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, baseline_train=baseline
+            )
+        else:
+            _phase(f"evolving (cap {cfg.pool.rounds} rounds, patience {cfg.pool.patience})")
+            pool, history = evolve(
+                bundle, pool, scorer, proposer, deduper, cfg.pool, cfg.seed, baseline_train=baseline
+            )
         pool = fixed + pool  # fixed hypotheses are part of the model, ahead of the evolved ones
 
     # STAGE 3 — CV-selected head on the full train split; the optional lexical

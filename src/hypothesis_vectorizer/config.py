@@ -58,12 +58,32 @@ class LMConfig(BaseModel):
     instruction_path: str | None = None
 
 
+class TreeConfig(BaseModel):
+    """Tree-guided evolve (PoolConfig.method='tree'): fit an entropy CART on the pool's features,
+    find the highest-entropy leaf, K-shot its examples to the LLM in a Refine/BestOfN loop to
+    propose ONE hypothesis that splits it (reward = info gain), add it, refit, repeat."""
+
+    rounds: int = 24  # LLM-in-loop rounds; one hypothesis added per productive round
+    refine_attempts: int = 4  # dspy.Refine / BestOfN budget per round
+    strategy: Literal["refine", "best_of_n"] = "refine"
+    leaf_shots: int = 12  # K examples sampled (stratified) from the target leaf for the LLM
+    leaf_min_samples: int = 20  # only target leaves with at least this many train examples
+    max_depth: int = 6  # asymmetric CART depth cap
+    min_samples_leaf: int = 10
+    patience: int = 3  # stop after this many consecutive rounds that add no new hypothesis
+
+
 class PoolConfig(BaseModel):
     size: int = 64  # ~30 useful directions exist per task (measured); 64 gives slack
-    rounds: int = 6  # hard cap; patience exits ~round 2-3 in practice
-    patience: int = 2  # stop when held-out CV accuracy stops improving
-    min_keep_frac: float = 0.5  # never prune below this fraction in one round
-    rank_sample: int = 800  # stability ranking needs no full-matrix precision
+    # Stage-2 refinement: 'stability' (CV permutation-importance prune/refill) or 'tree'
+    # (tree-guided LLM-in-loop split proposal — see TreeConfig). 'tree' grows `size` initial
+    # hypotheses by up to `tree.rounds` more; 32 is a sensible initial `size` for it.
+    method: Literal["stability", "tree"] = "stability"
+    tree: TreeConfig = TreeConfig()
+    rounds: int = 6  # stability: hard cap; patience exits ~round 2-3 in practice
+    patience: int = 2  # stability: stop when held-out CV accuracy stops improving
+    min_keep_frac: float = 0.5  # stability: never prune below this fraction in one round
+    rank_sample: int = 800  # stability: ranking needs no full-matrix precision
     # hand-written hypotheses that are ALWAYS kept: scored and fit alongside the generated
     # pool, but treated as a fixed baseline in evolution (never pruned; generated hypotheses
     # must add marginal value over them — same mechanism as the TF-IDF channel).
