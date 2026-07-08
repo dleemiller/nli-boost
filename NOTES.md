@@ -2032,3 +2032,16 @@ demand-driven; stretch = beat it; (c) failure mode = plateau far below 0.95 (see
 bootstrap targeting). Resource flag: ~3GB GPU batch 64 (Lee-approved footprint for this test
 family); RAM 11GB avail (ASR DataLoader creep again — watch). Est wall ~40-60 min (justification:
 this decides whether the tree-evolve line continues, per the v3 verdict's NEXT).
+
+## 2026-07-08 — FROM-SCRATCH VERDICT + leaf-blacklist fix; rerun launched
+trec_tree_scratch (seed 8): 0.948 acc / 0.9198 f1 / 0.2789 logloss @ 18 hyps (10 adds, stop round 12).
+vs pre-registration: (a) 10 adds — 3x v3 but below the 15-25 band; (b) NOT within noise of 0.960
+(-1.2pt) but at 56% of the pool (98.7% of the accuracy at ~half the inference cost); (c) not a
+bootstrap failure. ROOT CAUSE of under-growth found in the log: rounds 10-12 all burned on ONE
+stubborn leaf (n=373 DESC:351, H=0.364 -> gate demands 8%, LLM peaked 5.7%), then GLOBAL patience
+killed the loop with 17 rounds unused while other targets existed.
+FIX (committed): per-LEAF patience — a leaf that resists `patience` rounds is BLACKLISTED
+(membership-hash key, so an add that reshapes it auto-un-blacklists) and the loop moves to the
+next-worst leaf; stop only when no targetable leaf remains or rounds exhaust. PRE-REGISTERED for the
+rerun (trec_tree_scratch2): expect growth well past 18 (toward the 35 cap), and acc between 0.948
+and ~0.960; the pool-size-vs-accuracy CURVE is the real deliverable (efficiency story).

@@ -120,7 +120,10 @@ def test_tree_evolve_dedups_and_stops_on_patience():
     )
     assert pool == ["f1 noise one"]  # nothing added
     assert all(not h["added"] for h in history)
-    assert proposer.calls == 2  # stopped after `patience` no-add rounds
+    # per-leaf patience: each stubborn leaf gets `patience` rounds then is BLACKLISTED (not a
+    # global stop) — the loop ends when every targetable leaf is exhausted or rounds run out
+    assert proposer.calls >= 2
+    assert proposer.calls == len(history) <= 5
 
 
 def test_runner_from_run_tree_evolves_reused_pool(tmp_path, fast_models, monkeypatch):

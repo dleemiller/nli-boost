@@ -50,8 +50,20 @@ def _best_split_gain(scores: np.ndarray, y: np.ndarray, h0: float, n_thresholds:
     return best
 
 
+def _leaf_key(leaf_id: np.ndarray, lid: int) -> int:
+    """Content-based identity for a leaf: hash of its member indices. Leaf IDs shift between
+    refits, but an unchanged leaf keeps its membership — so a blacklisted stubborn leaf stays
+    blacklisted exactly until some add actually changes it."""
+    return hash(np.flatnonzero(leaf_id == lid).tobytes())
+
+
 def _pick_leaf(
-    leaf_id: np.ndarray, y: np.ndarray, min_samples: int, gate: float = 0.0, min_errors: int = 10
+    leaf_id: np.ndarray,
+    y: np.ndarray,
+    min_samples: int,
+    gate: float = 0.0,
+    min_errors: int = 10,
+    blacklist: set[int] = frozenset(),
 ) -> int | None:
     """The leaf whose majority vote makes the most ERRORS (n - majority count) — the quantity a
     resolved leaf actually repays in accuracy. Entropy x count was tried first and failed two
@@ -71,6 +83,8 @@ def _pick_leaf(
         if errors < min_errors:  # outlier contamination, not confusion (also unsplittable)
             continue
         if (n / n_total) * _entropy(y[mask]) < gate:  # perfect split couldn't clear the gate
+            continue
+        if _leaf_key(leaf_id, int(lid)) in blacklist:  # already resisted `patience` LLM rounds
             continue
         if errors > best_score:
             best, best_score = int(lid), errors
@@ -192,7 +206,8 @@ def tree_evolve(
     seen = {norm_statement(s) for s in pool}
     rejected_redundant: list[str] = []  # told to the LLM via `avoid` so it stops re-deriving them
     history: list[dict] = []
-    since_add = 0
+    fail_counts: dict[int, int] = {}  # leaf key -> consecutive failed rounds on that leaf
+    blacklist: set[int] = set()  # leaves that resisted `patience` rounds: skip, don't stop
 
     for round_i in range(tcfg.rounds):
         x = scorer.features(texts, pool)  # (n, 2m); layout is irrelevant to the tree
@@ -211,9 +226,10 @@ def tree_evolve(
             tcfg.leaf_min_samples,
             gate=tcfg.min_impurity_decrease,
             min_errors=tcfg.min_samples_leaf,
+            blacklist=blacklist,
         )
         if target is None:
-            print("--- tree-evolve stop: no impure leaf with enough samples", flush=True)
+            print("--- tree-evolve stop: no targetable leaf remains (pure/small/blacklisted)", flush=True)
             break
 
         mask = leaf_id == target
@@ -289,9 +305,20 @@ def tree_evolve(
             flush=True,
         )
 
-        since_add = 0 if added else since_add + 1
-        if since_add >= tcfg.patience:
-            print(f"--- tree-evolve stop: {tcfg.patience} rounds with no new hypothesis", flush=True)
-            break
+        # per-LEAF patience: a stubborn leaf gets blacklisted and the loop moves to the next-worst
+        # target — global patience killed a run with 17 rounds unused while other targets existed
+        # (measured 2026-07-08). The key is membership-based, so an add that reshapes the leaf
+        # automatically un-blacklists the new leaf it becomes.
+        key = _leaf_key(leaf_id, int(target))
+        if added:
+            fail_counts.pop(key, None)
+        else:
+            fail_counts[key] = fail_counts.get(key, 0) + 1
+            if fail_counts[key] >= tcfg.patience:
+                blacklist.add(key)
+                print(
+                    f"    leaf {target} blacklisted after {tcfg.patience} failed rounds; moving on",
+                    flush=True,
+                )
 
     return pool, history
