@@ -2086,3 +2086,17 @@ fewer hypotheses". The compression story survives; the accuracy-win story does n
 LAUNCHING seed 27 to disambiguate which seed is the outlier and report a 3-seed mean+/-std.
 PRE-REGISTERED: expect acc in [0.945, 0.965], pool 17-26; deliverable = 3-seed mean+/-std as the
 method's reported number.
+
+## 2026-07-08 — 3-SEED FINAL VERDICT on from-scratch tree growth (line closed pending Lee)
+Seeds 7/17/27: acc 0.962 / 0.950 / 0.944 -> **0.952 +/- 0.009** @ ~20 hyps (pools 21/19/20).
+Baseline static-32: 0.960. Stability method: 0.964 @ 62 (near-zero seed variance).
+FINAL HONEST CLAIM: from-scratch tree growth = ~0.8pt BELOW baseline on average at ~40% fewer
+hypotheses, with ~10x the seed variance of the stability method. The 0.962 first run was the
+best-of-3 outlier. It is a COMPRESSION/interpretability method (demand-driven pool = a map of task
+confusion), not an accuracy method, on full-data TREC.
+DECISION POINT (Lee): (a) tree-growth for its natural settings — low-N, 20newsgroups, or as the
+CFPB narrative-feature generator (baseline_features integration is built); (b) variance reduction
+(ensemble the 3 seed pools: union = 60 demand-driven hyps, or average heads — backlog #16 applied
+here); (c) park the line and return to the main backlog (#11-#18). Holding for Lee — 3 overnight
+runs answered the pre-registered question; more autonomous spend on this line isn't justified
+before he weighs the retraction.
