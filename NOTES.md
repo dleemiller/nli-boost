@@ -2020,3 +2020,15 @@ VERDICT vs pre-registration:
 NEXT (needs decision, not compute): where tree-evolve should shine is FROM-SCRATCH growth (start
 size~8, grow to ~35) and LOW-N — not polishing a mature pool. Also 20newsgroups (more classes =
 more leaves = more room). Candidate experiments when Lee wants them.
+
+## 2026-07-08 — LAUNCH: from-scratch tree growth (trec_tree_scratch)
+Decision this answers: is tree-evolve a GROWTH method (its design intent) or only a polish tool?
+v3 on a mature pool: accuracy flat, logloss -15%, only 3 adds before patience. From scratch (seed 8,
+grow to <=35, same final settings: error-mass targeting, gate 0.002 = acceptance bar, best_of_n x4
+parallel, 24 shots, 3-class) the starting tree is weak -> many big genuine leaves -> the LLM should
+do real work every round. PRE-REGISTERED: (a) many more adds than v3's 3 (expect 15-25); (b) success
+= within noise of static-32's 0.960 with a comparable pool size, since every hypothesis was
+demand-driven; stretch = beat it; (c) failure mode = plateau far below 0.95 (seed too weak to
+bootstrap targeting). Resource flag: ~3GB GPU batch 64 (Lee-approved footprint for this test
+family); RAM 11GB avail (ASR DataLoader creep again — watch). Est wall ~40-60 min (justification:
+this decides whether the tree-evolve line continues, per the v3 verdict's NEXT).
