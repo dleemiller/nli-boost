@@ -273,34 +273,68 @@ class Proposer:
             related_hypotheses=related_hypotheses,
             avoid=avoid,
         )
+        if strategy == "best_of_n":
+            hyps = self._sample_parallel(inputs, attempts)
+        else:  # refine: inherently sequential — each attempt sees the previous ones' feedback
+            hyps = self._sample_refine(inputs, attempts, evaluate_fn, threshold)
+
         best_hyp, best_score = None, -1.0
+        for hyp in hyps:
+            r = evaluate_fn(hyp) if not isinstance(hyp, tuple) else hyp[1]
+            h = hyp if not isinstance(hyp, tuple) else hyp[0]
+            if r["score"] > best_score:
+                best_hyp, best_score = h, r["score"]
+        return best_hyp, max(best_score, 0.0)
+
+    def _sample_parallel(self, inputs: dict, attempts: int) -> list[str]:
+        """best_of_n: independent samples -> concurrent LM calls via dspy.Parallel (THREAD pool —
+        never processes in a CUDA-holding parent — with dspy's thread-local context propagated,
+        the same machinery dspy.Evaluate uses). rollout_id busts the LM cache per sample."""
+        exec_pairs = [
+            (self._split, {**inputs, "feedback": [], "config": {"rollout_id": k}}) for k in range(attempts)
+        ]
+        n_before = len(self._lm.history)
+        try:
+            with dspy.context(lm=self._lm):
+                runner = dspy.Parallel(num_threads=min(attempts, 4), disable_progress_bar=True)
+                results = runner(exec_pairs)
+        except Exception as e:  # LM/parse pathologies must not kill a fit
+            print(f"      parallel sampling failed ({type(e).__name__})", flush=True)
+            results = []
+        finally:
+            self._track(self._lm, n_before)
+        out: list[str] = []
+        for pred in results or []:  # preserve order, drop failures/duplicate statements
+            h = (getattr(pred, "hypothesis", "") or "").strip() if pred is not None else ""
+            if h and h not in out:
+                out.append(h)
+        return out
+
+    def _sample_refine(self, inputs: dict, attempts: int, evaluate_fn, threshold: float) -> list[tuple]:
+        """refine: sequential; each attempt's prompt carries measured feedback on the previous."""
+        out: list[tuple] = []
         feedback: list[str] = []
         tried: set[str] = set()
         for k in range(attempts):
             n_before = len(self._lm.history)
             try:
                 with dspy.context(lm=self._lm):
-                    # rollout_id busts the LM cache so identical inputs still get fresh samples
                     pred = self._split(**inputs, feedback=list(feedback), config={"rollout_id": k})
                 hyp = (getattr(pred, "hypothesis", "") or "").strip()
-            except Exception as e:  # LM/parse pathologies must not kill a fit
+            except Exception as e:
                 print(f"      attempt {k + 1} failed ({type(e).__name__})", flush=True)
                 continue
             finally:
                 self._track(self._lm, n_before)
-            if not hyp:
-                continue
-            if hyp in tried:  # resampling the same statement carries no information
+            if not hyp or hyp in tried:
                 continue
             tried.add(hyp)
             r = evaluate_fn(hyp)
-            if r["score"] > best_score:
-                best_hyp, best_score = hyp, r["score"]
+            out.append((hyp, r))
             if r["score"] >= threshold:
                 break
-            if strategy == "refine":
-                feedback.append(_attempt_feedback(k, hyp, r))
-        return best_hyp, max(best_score, 0.0)
+            feedback.append(_attempt_feedback(k, hyp, r))
+        return out
 
     # -- internals -----------------------------------------------------------
 
