@@ -2131,3 +2131,21 @@ analysis (2026-07-05): trec at patience 4 / rounds 10, eps 1e-4 (control) vs 0.0
 same seed, -m encoder, heavily cached. PRE-REGISTERED: treatment stops in FEWER rounds (analysis:
 21% of transitions are sub-noise upticks that reset patience under 1e-4) with pool_cv within noise
 (+/-0.005) of control. Commit the knob if both hold; revert the default-change idea if pool_cv drops.
+
+## 2026-07-08 — FRAMING PROBE (Lee's challenge): encoder-ceiling claim RETRACTED for the DESC/ENTY leaf
+Lee: "perhaps for the hypotheses we have but framed differently it might [split]". Tested directly —
+hand-framed battery through finecat-l on the stuck 46-sample DESC/ENTY leaf (bar 25%, LLM peaked ~9%
+in-run; best failed attempt 18.5%):
+  "Answering the text requires explaining rather than naming."      36.0% gain, AUC 0.825 (entail)
+  "The answer to the text is an established name, term, or title."  28.9% gain (NEUTRAL column)
+Two framings CLEAR the bar -> the failure was the LLM's FRAMING, not the encoder. Principles:
+(1) CONTRASTIVE/ANTITHESIS framing — state the distinction itself ("A rather than B"), not one side;
+    one-sided phrasings sit at the encoder's uncertainty region.
+(2) The NEUTRAL column carries real signal for answer-property presuppositions (Lee's 3-class push
+    validated at the leaf level).
+Also observed: the leaf contains near-duplicate structures with different gold labels ("seven deadly
+sins"=DESC vs "7 articles of the constitution"=ENTY) — some residual is TREC label inconsistency.
+ACTION: SplitLeaf prompt now leads with the CONTRASTIVE angle (with the measured numbers as the
+instruction's evidence). Not yet re-run (GPU reserved for Lee's training per his stop order) —
+rerunning a seed with the new prompt is the next cheap experiment when he frees the GPU.
+Probe cost: 368 GPU pairs (~seconds).

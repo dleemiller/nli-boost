@@ -111,6 +111,12 @@ class SplitLeaf(dspy.Signature):
         "the OTHER classes in this leaf do NOT, and name that distinguishing property.\n"
         "The NLI encoder scores MEANING, not wording — exploit its ability to INFER. The strongest "
         "angles, in rough order:\n"
+        "- CONTRASTIVE (state the DISTINCTION itself, especially when two classes dominate the "
+        'leaf): phrase the boundary as one antithesis — "Answering the text requires explaining '
+        'rather than naming." / "The text asks for a judgment rather than a fact." One-sided '
+        'phrasings ("asks for a name") sit at the encoder\'s uncertainty region; the A-rather-'
+        "than-B form makes the boundary the CONTENT of the hypothesis (measured: 36% leaf gain "
+        "where one-sided attempts peaked at 13%).\n"
         '- ANTICIPATE THE ANSWER: state what answering the text would produce or require ("The '
         'text can be answered with a single named entity." / "Answering the text requires '
         'explaining a process or cause." / "The answer would be a quantity, date, or measurement.")\n'
