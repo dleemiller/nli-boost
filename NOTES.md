@@ -2108,3 +2108,19 @@ success = >=0.960 (baseline parity from purely demand-driven hyps); strong succe
 stability at the same pool size ~60, meaning union-of-cheap-tree-pools == stability quality);
 <0.956 would mean cross-seed hyps interfere (collinearity hurting the head) — would surprise me.
 Cache: train fully warm (all 3 runs share the full 5452 train); test partially warm (~2-3 min GPU).
+
+## 2026-07-08 — UNION ENSEMBLE VERDICT: strong-success band hit; backlog #16 closed
+trec_tree_union (59 demand-driven hyps = union of 3 seed pools): 0.964 acc / 0.9674 macro_f1 /
+0.2133 logloss. Pre-registered strong success (~0.964, ties stability) HIT exactly.
+McNemar vs trec_full (stability, same seed-7 test): delta +0.002, p=1.0 — statistical TIE.
+Notably macro_f1 0.9674 is the BEST f1 in the project (stability 0.960, baseline-32 0.9478).
+STORY THAT NOW HOLDS (all pre-registered, seed-checked, significance-tested):
+  1. single tree-growth run: cheap, interpretable, compressed (0.952+/-0.009 @ ~20 hyps) — the
+     budget option; every hypothesis traceable to the confusion that demanded it.
+  2. UNION of 3 tree runs: ties the stability method's accuracy with the project's best macro_f1 —
+     variance averages out, demand-driven coverage compounds (rare classes gain: +0.7pt f1 at
+     equal accuracy suggests better tail-class coverage than stability's survivor pool).
+  3. stability method: still the single-run accuracy champion at low variance.
+Backlog #16 (multi-pool ensemble) CLOSED — implemented as pool-union (simpler than head averaging,
+and sufficient). Tree-evolve line now fully characterized; next moves remain Lee's call
+(low-N / 20NG / CFPB integration).
