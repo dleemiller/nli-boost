@@ -1,0 +1,40 @@
+[
+  {"text": "The comment is angry or furious about something.", "intended_class": "anger"},
+  {"text": "The writer sounds annoyed, irritated, or fed up.", "intended_class": "anger"},
+  {"text": "The comment expresses disapproval or is criticizing someone's behavior.", "intended_class": "anger"},
+  {"text": "The writer is being hostile, insulting, or telling someone off.", "intended_class": "anger"},
+
+  {"text": "The comment expresses disgust or finds something gross.", "intended_class": "disgust"},
+  {"text": "The writer thinks something is disgusting, sickening, or vile.", "intended_class": "disgust"},
+  {"text": "The comment reacts with contempt or revulsion to something distasteful.", "intended_class": "disgust"},
+
+  {"text": "The comment expresses fear or being scared.", "intended_class": "fear"},
+  {"text": "The writer sounds anxious, nervous, or worried about what might happen.", "intended_class": "fear"},
+  {"text": "The comment conveys dread or a sense of threat or danger.", "intended_class": "fear"},
+
+  {"text": "The comment is happy, cheerful, or in a good mood.", "intended_class": "joy"},
+  {"text": "The writer finds something funny or amusing and is laughing.", "intended_class": "joy"},
+  {"text": "The comment is thanking someone or expressing gratitude.", "intended_class": "joy"},
+  {"text": "The writer admires, respects, or is impressed by someone or something.", "intended_class": "joy"},
+  {"text": "The comment agrees with or approves of something.", "intended_class": "joy"},
+  {"text": "The writer expresses love, affection, or caring toward someone.", "intended_class": "joy"},
+  {"text": "The comment is excited, enthusiastic, or hyped about something.", "intended_class": "joy"},
+  {"text": "The writer sounds proud of an accomplishment.", "intended_class": "joy"},
+  {"text": "The comment is hopeful or optimistic about the future.", "intended_class": "joy"},
+  {"text": "The writer feels relieved that something worked out.", "intended_class": "joy"},
+
+  {"text": "The comment expresses sadness or unhappiness.", "intended_class": "sadness"},
+  {"text": "The writer sounds disappointed or let down.", "intended_class": "sadness"},
+  {"text": "The comment conveys grief, heartbreak, or loss.", "intended_class": "sadness"},
+  {"text": "The writer sounds embarrassed or ashamed.", "intended_class": "sadness"},
+  {"text": "The comment expresses regret, remorse, or an apology.", "intended_class": "sadness"},
+
+  {"text": "The comment expresses surprise or shock at something unexpected.", "intended_class": "surprise"},
+  {"text": "The writer just realized or figured something out.", "intended_class": "surprise"},
+  {"text": "The comment sounds confused or unsure about what is going on.", "intended_class": "surprise"},
+  {"text": "The writer is curious and wants to know more.", "intended_class": "surprise"},
+
+  {"text": "The comment is a neutral, matter-of-fact statement with no clear emotion.", "intended_class": "neutral"},
+  {"text": "The comment is just asking a question or giving information.", "intended_class": "neutral"},
+  {"text": "The writer is stating an opinion plainly without strong feeling.", "intended_class": "neutral"}
+]
