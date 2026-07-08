@@ -2100,3 +2100,11 @@ CFPB narrative-feature generator (baseline_features integration is built); (b) v
 here); (c) park the line and return to the main backlog (#11-#18). Holding for Lee — 3 overnight
 runs answered the pre-registered question; more autonomous spend on this line isn't justified
 before he weighs the retraction.
+
+## 2026-07-08 — LAUNCH: 3-pool union ensemble (backlog #16 on the tree pools)
+Union of scratch2+s17+s27 pools (21+19+22, text-dedup'd), head on the superset, seed-7 split.
+PRE-REGISTERED: features are a superset of seed-7's pool, so expect acc >= 0.962 minus head noise;
+success = >=0.960 (baseline parity from purely demand-driven hyps); strong success = ~0.964 (ties
+stability at the same pool size ~60, meaning union-of-cheap-tree-pools == stability quality);
+<0.956 would mean cross-seed hyps interfere (collinearity hurting the head) — would surprise me.
+Cache: train fully warm (all 3 runs share the full 5452 train); test partially warm (~2-3 min GPU).

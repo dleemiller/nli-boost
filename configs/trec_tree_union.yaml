@@ -1,0 +1,25 @@
+# Backlog #16 (multi-pool ensemble) applied to the tree pools: UNION of the 3 seed runs'
+# demand-driven hypotheses, head fit on the superset. Question: does ensembling recover
+# stability-method accuracy (0.964@62) from cheap tree pools (0.952+/-0.009 @ ~20)?
+run_name: trec_tree_union
+seed: 7
+
+data:
+  name: trec
+  train_size: 5452
+  val_size: 0
+  test_size: 2000
+
+encoder:
+  model: dleemiller/finecat-nli-l
+  batch_size: 64
+  features: full
+
+lm:
+  model: openrouter/deepseek/deepseek-v4-flash
+
+pool:
+  from_run: trec_tree_union_src
+  method: tree
+  tree:
+    rounds: 0  # no growth: pure union evaluation
