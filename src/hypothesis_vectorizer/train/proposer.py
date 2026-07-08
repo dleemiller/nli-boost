@@ -108,28 +108,46 @@ class SplitLeaf(dspy.Signature):
         "cannot tell apart (the `confused_examples`, with their true labels). Write ONE new NLI "
         "hypothesis whose ENTAILMENT SCORE would best SEPARATE those classes — high for some of the "
         "confused classes and low for the others. Study what the examples of each class share that "
-        "the OTHER classes in this leaf do NOT, and name that distinguishing property. The tree "
-        "already handles everything ABOVE this leaf, so do not restate coarse distinctions; target "
-        "exactly what still mixes here. Return a single statement. " + _RULES
+        "the OTHER classes in this leaf do NOT, and name that distinguishing property. The "
+        "`related_hypotheses` are what the model ALREADY has for this leaf, each with the fraction "
+        "of the leaf's confusion it resolves — they are INSUFFICIENT, and a paraphrase of one of "
+        "them will score zero (its signal is already measured): write a hypothesis reading a "
+        "genuinely DIFFERENT property than every listed one. The tree already handles everything "
+        "ABOVE this leaf, so do not restate coarse distinctions; target exactly what still mixes "
+        "here. Return a single statement. " + _RULES
     )
 
     task: str = dspy.InputField(desc="the classification task")
     class_definitions: list[str] = dspy.InputField(desc="one-line definition per class")
     confused_examples: list[str] = dspy.InputField(desc="'[class] text' samples mixed in this leaf")
     classes_present: list[str] = dspy.InputField(desc="the classes in this leaf, with example counts")
+    related_hypotheses: list[str] = dspy.InputField(
+        desc="existing hypotheses most relevant to this leaf, with the (insufficient) fraction of "
+        "leaf confusion each resolves; complement them, never paraphrase them"
+    )
+    feedback: list[str] = dspy.InputField(
+        desc="MEASURED results of your previous attempts this round, each with why it scored low "
+        "(weak split, or collinear with a named existing hypothesis); fix exactly those failures"
+    )
     avoid: list[str] = dspy.InputField(desc="hypotheses already in the pool; do not repeat or paraphrase")
     hypothesis: str = dspy.OutputField(desc="a single declarative sentence about 'the text'")
 
 
-class _SplitModule(dspy.Module):
-    """Bare module wrapped by dspy.Refine/BestOfN — one SplitLeaf prediction per call."""
-
-    def __init__(self):
-        super().__init__()
-        self.predict = dspy.Predict(SplitLeaf)
-
-    def forward(self, **kwargs):
-        return self.predict(**kwargs)
+def _attempt_feedback(i: int, hyp: str, r: dict) -> str:
+    """Language feedback for the next attempt — names the covariant hypothesis when that is the
+    failure, because the wording is more instructive than any scalar."""
+    if r.get("covariant_with") is not None and r["novelty"] < 0.5:
+        return (
+            f'Attempt {i + 1}: "{hyp}" scored {r["score"]:.2f}. Its entailment scores correlate '
+            f'{1 - r["novelty"]:.2f} with the EXISTING hypothesis "{r["covariant_with"]}" — the model '
+            "already has that exact signal, however differently it is worded. Read a genuinely "
+            "DIFFERENT property of the text."
+        )
+    return (
+        f'Attempt {i + 1}: "{hyp}" scored {r["score"]:.2f} (info gain {r["gain"]:.2f}). Its entailment '
+        "scores barely separate the confused classes — the property is too weak, too rare here, or "
+        "undetectable by the NLI encoder. Try a sharper, more concrete distinguishing property."
+    )
 
 
 def _flatten(result) -> list[str]:
@@ -166,6 +184,7 @@ class Proposer:
         self._retry_lm = None  # built on first failure
         self._generate = dspy.Predict(GeneratePool)
         self._refill = dspy.Predict(RefillPool)
+        self._split = dspy.Predict(SplitLeaf)
         if cfg.instruction_path:  # swap in a GEPA-tuned GeneratePool instruction
             import json
 
@@ -210,35 +229,57 @@ class Proposer:
         class_definitions: list[str],
         confused_examples: list[str],
         classes_present: list[str],
+        related_hypotheses: list[str],
         avoid: list[str],
-        reward_fn,
+        evaluate_fn,
         attempts: int = 4,
         strategy: str = "refine",
+        threshold: float = 1.0,
     ) -> tuple[str | None, float]:
-        """Propose ONE hypothesis that splits a confused tree leaf, choosing the best of up to
-        `attempts` LM samples by `reward_fn(inputs, prediction) -> float` (info gain, supplied by
-        tree_evolve). `strategy`: 'refine' (dspy.Refine — feeds the reward back as advice between
-        attempts) or 'best_of_n' (dspy.BestOfN — independent samples). Never crashes a fit."""
+        """Propose ONE hypothesis that splits a confused tree leaf: up to `attempts` LM samples,
+        each scored by `evaluate_fn(hyp) -> {score, gain, novelty, covariant_with}` (leaf info gain
+        x novelty, from tree_evolve); best scorer wins, early exit at `threshold`.
+
+        Our OWN refine loop, not dspy.Refine: its feedback module only sees the scalar reward (and
+        burns a second LM call guessing advice), while we KNOW the failure — so 'refine' feeds the
+        next attempt measured language ("collinear with <named hypothesis>", "info gain 0.04").
+        'best_of_n' = same loop, no feedback (independent samples). Never crashes a fit."""
         inputs = dict(
             task=task,
             class_definitions=class_definitions,
             confused_examples=confused_examples,
             classes_present=classes_present,
+            related_hypotheses=related_hypotheses,
             avoid=avoid,
         )
-        cls = dspy.BestOfN if strategy == "best_of_n" else dspy.Refine
-        n_before = len(self._lm.history)
-        try:
-            runner = cls(module=_SplitModule(), N=attempts, reward_fn=reward_fn, threshold=1.0)
-            with dspy.context(lm=self._lm):
-                pred = runner(**inputs)
-            hyp = (getattr(pred, "hypothesis", "") or "").strip()
-            return (hyp or None), (float(reward_fn(inputs, pred)) if hyp else 0.0)
-        except Exception as e:  # LM/parse pathologies must not kill a fit
-            print(f"    split_leaf failed ({type(e).__name__})", flush=True)
-            return None, 0.0
-        finally:
-            self._track(self._lm, n_before)
+        best_hyp, best_score = None, -1.0
+        feedback: list[str] = []
+        tried: set[str] = set()
+        for k in range(attempts):
+            n_before = len(self._lm.history)
+            try:
+                with dspy.context(lm=self._lm):
+                    # rollout_id busts the LM cache so identical inputs still get fresh samples
+                    pred = self._split(**inputs, feedback=list(feedback), config={"rollout_id": k})
+                hyp = (getattr(pred, "hypothesis", "") or "").strip()
+            except Exception as e:  # LM/parse pathologies must not kill a fit
+                print(f"      attempt {k + 1} failed ({type(e).__name__})", flush=True)
+                continue
+            finally:
+                self._track(self._lm, n_before)
+            if not hyp:
+                continue
+            if hyp in tried:  # resampling the same statement carries no information
+                continue
+            tried.add(hyp)
+            r = evaluate_fn(hyp)
+            if r["score"] > best_score:
+                best_hyp, best_score = hyp, r["score"]
+            if r["score"] >= threshold:
+                break
+            if strategy == "refine":
+                feedback.append(_attempt_feedback(k, hyp, r))
+        return best_hyp, max(best_score, 0.0)
 
     # -- internals -----------------------------------------------------------
 

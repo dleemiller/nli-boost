@@ -5,8 +5,6 @@ returns 'f0 ...' hands tree_evolve a column that actually separates the syntheti
 mechanism the other fake-driven tests use.
 """
 
-from types import SimpleNamespace
-
 import numpy as np
 from conftest import FakeScorer, TextOnlyDeduper, encode
 
@@ -21,15 +19,17 @@ from hypothesis_vectorizer.train.tree_evolve import (
 
 
 class TreeFakeProposer:
-    """split_leaf always returns the same statement, scored via the real reward_fn (info gain)."""
+    """split_leaf always returns the same statement, scored via the real evaluate_fn."""
 
     def __init__(self, hyp):
         self.hyp = hyp
         self.calls = 0
+        self.last_related = None
 
-    def split_leaf(self, *, reward_fn, **kwargs):
+    def split_leaf(self, *, evaluate_fn, related_hypotheses=None, **kwargs):
         self.calls += 1
-        return self.hyp, float(reward_fn(kwargs, SimpleNamespace(hypothesis=self.hyp)))
+        self.last_related = related_hypotheses
+        return self.hyp, float(evaluate_fn(self.hyp)["score"])
 
 
 def _binary_bundle(n=80, seed=0):
@@ -170,3 +170,30 @@ def test_runner_from_run_tree_evolves_reused_pool(tmp_path, fast_models, monkeyp
     model = json.loads((tmp_path / "runs" / "treed" / "model.json").read_text())
     assert model["hypotheses"][:2] == ["f4 noise", "f5 noise"]  # truncation kept the first 2
     assert tree_proposer.calls >= 1  # tree evolution actually ran on the reused pool
+
+
+def test_evaluator_zeroes_covariant_candidates_and_names_the_culprit():
+    from hypothesis_vectorizer.train.tree_evolve import _make_evaluator
+
+    bundle = _binary_bundle()
+    pool = ["f0 already reads the signal"]
+    scorer = FakeScorer()
+    x_leaf = scorer.features(bundle.train_texts, pool)  # existing pool features on the "leaf"
+    ev = _make_evaluator(scorer, bundle.train_texts, bundle.y_train, pool, x_leaf)
+    # a candidate reading the SAME column: high gain but zero novelty -> score ~0, culprit named
+    r = ev("f0 same column different words")
+    assert r["gain"] > 0.5 and r["novelty"] < 0.05 and r["score"] < 0.05
+    assert r["covariant_with"] == "f0 already reads the signal"
+    # an unrelated noisy column: novel but useless -> low gain dominates
+    r2 = ev("f2 noise")
+    assert r2["novelty"] > 0.5 and r2["gain"] < 0.3
+
+
+def test_related_hypotheses_ranks_informative_first():
+    from hypothesis_vectorizer.train.tree_evolve import _related_hypotheses
+
+    bundle = _binary_bundle()
+    pool = ["f1 noise", "f0 informative"]
+    x_leaf = FakeScorer().features(bundle.train_texts, pool)
+    rel = _related_hypotheses(x_leaf, bundle.y_train, pool, top=2)
+    assert "f0 informative" in rel[0] and rel[0].startswith("resolves")

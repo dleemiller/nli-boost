@@ -4,8 +4,9 @@ Where the stability method (evolve.py) prunes a large pool by CV importance, thi
 pool by feedback: fit an entropy decision tree on the current features, find the leaf it is most
 confused about (highest entropy x count), and ask the LLM — shown K labelled examples from exactly
 that leaf — for ONE hypothesis whose entailment score would carve those classes apart. The candidate
-is chosen by a Refine/BestOfN loop whose reward is the information gain of its best threshold split
-on the leaf. Add it, refit the tree, repeat. The tree is the gradient signal: it says precisely
+is chosen by an in-house refine loop (proposer.split_leaf): each attempt is scored gain x novelty,
+failures are fed back to the LLM as MEASURED LANGUAGE ("collinear with <named hypothesis>"), best
+attempt wins. Add it, refit the tree, repeat. The tree is the gradient signal: it says precisely
 where the current features fail, one confused region at a time.
 
 The result is a pool; the RF/HGB head is fit afterward by the runner (honest protocol: pool_cv).
@@ -79,21 +80,82 @@ def _sample_shots(idx: np.ndarray, y: np.ndarray, k: int, rng: np.random.Generat
     return picked[:k]
 
 
-def _make_reward(scorer: EntailmentScorer, leaf_texts: list[str], leaf_y: np.ndarray):
-    """reward(inputs, pred) -> normalized info gain in [0, 1]: how much of the leaf's entropy the
-    candidate hypothesis' best threshold split removes (taking the better of entail/contradict)."""
+def _max_abs_corr(col: np.ndarray, pool_cols: np.ndarray) -> tuple[float, int]:
+    """(max |Pearson|, argmax column index) between a candidate's score vector and every existing
+    pool feature column (entail AND contradict), on the leaf texts. 'Novelty' = 1 - max."""
+    if np.std(col) < 1e-9 or pool_cols.shape[1] == 0:
+        return 0.0, -1
+    c = (col - col.mean()) / col.std()
+    z = pool_cols - pool_cols.mean(axis=0)
+    s = pool_cols.std(axis=0)
+    corr = np.zeros(pool_cols.shape[1])
+    valid = s > 1e-9
+    corr[valid] = np.abs((z[:, valid] / s[valid]).T @ c) / len(col)
+    j = int(np.argmax(corr))
+    return float(corr[j]), j
+
+
+def _make_evaluator(
+    scorer: EntailmentScorer,
+    leaf_texts: list[str],
+    leaf_y: np.ndarray,
+    pool: list[str],
+    pool_leaf_feats: np.ndarray,
+):
+    """evaluate(hyp) -> {score, gain, novelty, covariant_with}. score = gain x novelty, both [0,1]:
+
+    - gain: fraction of the leaf's entropy removed by the candidate's best threshold split
+      (better of entail/contradict).
+    - novelty: 1 - max |corr| with the EXISTING pool's feature columns on this leaf; a candidate
+      collinear with a feature the tree already has scores ~0 however well it splits.
+    - covariant_with: the TEXT of the most-correlated existing hypothesis — fed back to the LLM
+      verbatim (the wording is the useful feedback, not the scalar).
+    Every evaluation is printed live and kept on `evaluate.attempts`."""
     h0 = _entropy(leaf_y)
+    m = len(pool)
 
-    def reward(*args) -> float:
-        pred = args[-1]
-        hyp = (getattr(pred, "hypothesis", "") or "").strip()
-        if not hyp or h0 <= 0.0:
-            return 0.0
+    def evaluate(hyp: str) -> dict:
         feats = scorer.features(leaf_texts, [hyp])  # (k, 2) = [entail | contradict]
-        gain = max(_best_split_gain(feats[:, 0], leaf_y, h0), _best_split_gain(feats[:, 1], leaf_y, h0))
-        return gain / h0
+        gains = [_best_split_gain(feats[:, i], leaf_y, h0) for i in (0, 1)] if h0 > 0 else [0.0, 0.0]
+        best = int(np.argmax(gains))
+        gain_norm = gains[best] / h0 if h0 > 0 else 0.0
+        max_corr, j = _max_abs_corr(feats[:, best], pool_leaf_feats)
+        novelty = 1.0 - max_corr
+        r = {
+            "hypothesis": hyp,
+            "score": round(gain_norm * novelty, 4),
+            "gain": round(gain_norm, 4),
+            "novelty": round(novelty, 4),
+            "covariant_with": pool[j % m] if j >= 0 else None,
+        }
+        evaluate.attempts.append(r)
+        print(
+            f"      attempt {len(evaluate.attempts)}: score={r['score']:.3f} "
+            f"(gain {gain_norm:.3f} x novelty {novelty:.3f}"
+            + (f', ~ "{r["covariant_with"][:60]}"' if max_corr > 0.5 else "")
+            + f") | {hyp[:90]}",
+            flush=True,
+        )
+        return r
 
-    return reward
+    evaluate.attempts = []
+    return evaluate
+
+
+def _related_hypotheses(x_leaf: np.ndarray, leaf_y: np.ndarray, pool: list[str], top: int = 10) -> list[str]:
+    """The existing hypotheses most relevant to this leaf, each with the (insufficient) fraction
+    of the leaf's entropy its best split resolves — shown to the LLM so it knows what the model
+    already reads here and complements rather than re-derives it."""
+    h0 = _entropy(leaf_y)
+    if h0 <= 0:
+        return []
+    m = len(pool)
+    scored = []
+    for j in range(m):
+        g = max(_best_split_gain(x_leaf[:, j], leaf_y, h0), _best_split_gain(x_leaf[:, m + j], leaf_y, h0))
+        scored.append((g / h0, pool[j]))
+    scored.sort(reverse=True)
+    return [f"resolves {g:.0%} of this leaf's confusion: {s}" for g, s in scored[:top]]
 
 
 def tree_evolve(
@@ -115,6 +177,7 @@ def tree_evolve(
     texts, y, names = bundle.train_texts, bundle.y_train, bundle.class_names
     pool = list(pool)
     seen = {norm_statement(s) for s in pool}
+    rejected_redundant: list[str] = []  # told to the LLM via `avoid` so it stops re-deriving them
     history: list[dict] = []
     since_add = 0
 
@@ -142,24 +205,32 @@ def tree_evolve(
         shot_idx = _sample_shots(leaf_local, y, tcfg.leaf_shots, rng)
         examples = [f"[{names[y[i]]}] {texts[i][:400]}" for i in shot_idx]
 
-        reward_fn = _make_reward(scorer, leaf_texts, leaf_y)
+        print(
+            f"--- tree-evolve round {round_i}: targeting leaf {target} "
+            f"(n={int(mask.sum())}, H={_entropy(leaf_y):.3f}, {'/'.join(classes_present)})",
+            flush=True,
+        )
+        evaluate_fn = _make_evaluator(scorer, leaf_texts, leaf_y, pool, x[mask])
         hyp, reward = proposer.split_leaf(
             task=bundle.task,
             class_definitions=bundle.class_descriptions,
             confused_examples=examples,
             classes_present=classes_present,
-            avoid=pool,
-            reward_fn=reward_fn,
+            related_hypotheses=_related_hypotheses(x[mask], leaf_y, pool),
+            avoid=pool + rejected_redundant,
+            evaluate_fn=evaluate_fn,
             attempts=tcfg.refine_attempts,
             strategy=tcfg.strategy,
         )
 
         added = None
         if hyp:
-            kept, _ = deduper.filter([hyp], against=pool, seen=seen)
+            kept, rejects = deduper.filter([hyp], against=pool, seen=seen)
             if kept:
                 added = kept[0]
                 pool.append(added)
+            else:  # survived the reward's leaf-novelty but is redundant on the FULL train:
+                rejected_redundant.append(hyp)  # tell the LLM explicitly in later rounds
 
         history.append(
             {
@@ -170,14 +241,14 @@ def tree_evolve(
                 "classes_present": classes_present,
                 "hypothesis": hyp,
                 "info_gain": round(float(reward), 4),
+                "attempts": evaluate_fn.attempts,  # every LLM attempt: score/gain/novelty/covariant
                 "added": added is not None,
                 "pool_size": len(pool),
             }
         )
         print(
-            f"--- tree-evolve round {round_i}: leaf {target} "
-            f"(n={int(mask.sum())}, H={_entropy(leaf_y):.3f}, {'/'.join(classes_present)}), "
-            f"gain {reward:.3f}, {'added' if added else 'no-add'} -> pool {len(pool)}",
+            f"    round {round_i} result: best score {reward:.3f} over {len(evaluate_fn.attempts)} "
+            f"attempts, {'ADDED' if added else 'no-add'} -> pool {len(pool)}",
             flush=True,
         )
 
