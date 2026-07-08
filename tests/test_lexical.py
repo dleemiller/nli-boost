@@ -24,7 +24,7 @@ def test_tfidf_svd_clamps_dims_to_vocabulary():
     assert lex.transform(tiny).shape[1] < 64
 
 
-def test_runner_concatenates_lexical_channel(tmp_path):
+def test_runner_concatenates_lexical_channel(tmp_path, fast_models):
     cfg = RunConfig(
         run_name="lex",
         data=DataConfig(name="trec"),

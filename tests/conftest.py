@@ -68,7 +68,7 @@ def encode(x: np.ndarray) -> list[str]:
     return ["|".join(f"{v:.6f}" for v in row) for row in np.atleast_2d(x)]
 
 
-def make_bundle(n=400, seed=0, n_features=8, n_classes=4):
+def make_bundle(n=200, seed=0, n_features=8, n_classes=4):
     """f0, f1 informative (define the label); remaining features are noise;
     the LAST feature column is constant (guaranteed confident-dead)."""
     rng = np.random.default_rng(seed)
@@ -89,4 +89,29 @@ def make_bundle(n=400, seed=0, n_features=8, n_classes=4):
         y_val=y[half : half + n // 4],
         test_texts=encode(x[half + n // 4 :]),
         y_test=y[half + n // 4 :],
+    )
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture
+def fast_models(monkeypatch):
+    """Shrink every estimator-size knob for LOGIC tests: same code paths, same wiring, same
+    assertions — tiny estimator budgets. Head/evolve behavior on separable fake data is
+    identical at 20 trees vs 300; the prod sizes are a quality knob, not a logic branch.
+    The 0.964 reproduction test (marked slow, opt-in) is the only one needing prod sizes."""
+    from hypothesis_vectorizer.train import evolve, head
+
+    monkeypatch.setattr(head, "_RF_TREES", 20)
+    monkeypatch.setattr(head, "_HGB_ITERS", 20)
+    monkeypatch.setattr(evolve, "_RANK_ITERS", 20)
+    monkeypatch.setattr(evolve, "_PERM_REPEATS", 1)
+    monkeypatch.setattr(
+        head,
+        "_GRID",
+        [
+            dict(kind="rf", min_samples_leaf=5, max_features=0.6),
+            dict(kind="hgb", learning_rate=0.12, l2_regularization=0.01),
+        ],
     )

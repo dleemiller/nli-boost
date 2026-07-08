@@ -58,6 +58,8 @@ default-groups = ["dev"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"  # slow = prod-size reproduction tests; run with -m slow
+markers = ["slow: prod-size estimator tests (0.964 reproduction); excluded by default"]
 
 [tool.ruff]
 line-length = 110

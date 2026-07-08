@@ -6,7 +6,7 @@ from hypothesis_vectorizer.encoder import digest, normalize
 from hypothesis_vectorizer.train.head import cv_selected_head, evaluate
 
 
-def test_cv_selected_head_learns_separable_data():
+def test_cv_selected_head_learns_separable_data(fast_models):
     bundle = make_bundle(n=600)
     scorer = FakeScorer()
     pool = [f"f{i}" for i in range(8)]

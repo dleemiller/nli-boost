@@ -7,6 +7,7 @@ inflated results +2.2 pts. There is exactly one head in the output: pool_cv.
 """
 
 import numpy as np
+from joblib import parallel_backend
 from sklearn.base import clone
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, log_loss
@@ -18,12 +19,16 @@ _GRID = [
     dict(kind="rf", min_samples_leaf=msl, max_features=mf) for msl in (2, 5, 10) for mf in (0.3, 0.6, 1.0)
 ] + [dict(kind="hgb", learning_rate=lr, l2_regularization=l2) for lr in (0.06, 0.12) for l2 in (0.01, 0.3)]
 
+# estimator sizes as module constants so tests can shrink them (logic is size-independent)
+_RF_TREES = 300
+_HGB_ITERS = 200
+
 
 def _build(params: dict, seed: int):
     p = dict(params)
     if p.pop("kind") == "rf":
-        return RandomForestClassifier(n_estimators=300, random_state=seed, n_jobs=4, **p)
-    return HistGradientBoostingClassifier(max_iter=200, random_state=seed, **p)
+        return RandomForestClassifier(n_estimators=_RF_TREES, random_state=seed, n_jobs=4, **p)
+    return HistGradientBoostingClassifier(max_iter=_HGB_ITERS, random_state=seed, **p)
 
 
 def cv_selected_head(x: np.ndarray, y: np.ndarray, seed: int, folds: int = 4):
@@ -31,9 +36,13 @@ def cv_selected_head(x: np.ndarray, y: np.ndarray, seed: int, folds: int = 4):
 
     Returns (fitted head, chosen params, cv accuracy).
     """
-    scored = [
-        (float(cross_val_score(_build(p, seed), x, y, cv=folds).mean()), i) for i, p in enumerate(_GRID)
-    ]
+    # THREAD-backend parallel CV (never processes: forking a CUDA-holding parent has
+    # crashed this machine). RF/HGB fits release the GIL, so threads give a real speedup.
+    with parallel_backend("threading", n_jobs=4):
+        scored = [
+            (float(cross_val_score(_build(p, seed), x, y, cv=folds, n_jobs=4).mean()), i)
+            for i, p in enumerate(_GRID)
+        ]
     cv_acc, best_i = max(scored)
     head = clone(_build(_GRID[best_i], seed))
     head.fit(x, y)

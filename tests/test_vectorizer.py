@@ -240,7 +240,7 @@ def test_fit_passes_baseline_features_to_evolution(monkeypatch):
         v.fit(["a", "b"], [0, 1], baseline_features=np.zeros((3, 2)))
 
 
-def test_fit_evolves_when_enabled(monkeypatch):
+def test_fit_evolves_when_enabled(monkeypatch, fast_models):
     import hypothesis_vectorizer.dedup as dedup_mod
     import hypothesis_vectorizer.train.proposer as prop_mod
 

@@ -27,6 +27,9 @@ from ..dedup import Deduper
 from ..encoder import EntailmentScorer
 from .proposer import Proposer
 
+_RANK_ITERS = 100  # ranking-model size; module constant so tests can shrink it
+_PERM_REPEATS = 3  # permutation-importance repeats; module constant so tests can shrink it
+
 
 @dataclass
 class Ranking:
@@ -61,10 +64,10 @@ def rank_hypotheses(
     errors: list[tuple[int, int]] = []
     skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
     for f, (itr, ihe) in enumerate(skf.split(xx, y)):
-        clf = HistGradientBoostingClassifier(max_iter=100, random_state=seed)
+        clf = HistGradientBoostingClassifier(max_iter=_RANK_ITERS, random_state=seed)
         clf.fit(xx[itr], y[itr])
         imps[f] = permutation_importance(
-            clf, xx[ihe], y[ihe], n_repeats=3, random_state=seed
+            clf, xx[ihe], y[ihe], n_repeats=_PERM_REPEATS, random_state=seed
         ).importances_mean
         preds = clf.predict(xx[ihe])
         errors += [(int(i), int(p)) for i, p in zip(ihe, preds) if p != y[i]]

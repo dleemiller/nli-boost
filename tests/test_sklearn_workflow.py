@@ -48,6 +48,7 @@ def _pipeline():
     return Pipeline([("features", features), ("clf", clf)]), cfg
 
 
+@pytest.mark.slow
 def test_sklearn_pipeline_reproduces_0964():
     from hypothesis_vectorizer.train.data import load
     from sklearn.base import clone

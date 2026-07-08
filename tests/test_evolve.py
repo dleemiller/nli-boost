@@ -5,7 +5,7 @@ from hypothesis_vectorizer.config import PoolConfig
 from hypothesis_vectorizer.train.evolve import evolve, hotspots, rank_hypotheses
 
 
-def test_rank_informative_hypotheses_first():
+def test_rank_informative_hypotheses_first(fast_models):
     bundle = make_bundle()
     pool = [f"f{i}" for i in range(8)]
     scorer = FakeScorer()
@@ -24,7 +24,7 @@ def test_hotspots_group_mutually_confused_classes():
     assert groups == [[0, 1]]
 
 
-def test_evolve_prunes_constant_feature_with_reason_and_stops_on_plateau():
+def test_evolve_prunes_constant_feature_with_reason_and_stops_on_plateau(fast_models):
     bundle = make_bundle()
     pool = [f"f{i}" for i in range(8)]  # f7 is constant -> confident dead
     proposer = FakeProposer(refill_batches=[[f"f{2 + i} variant {i}" for i in range(4)]] * 6)
@@ -45,7 +45,7 @@ def test_evolve_prunes_constant_feature_with_reason_and_stops_on_plateau():
     assert proposer.refill_calls and proposer.refill_calls[0]["failed"]
 
 
-def test_evolve_records_refill_target_aucs():
+def test_evolve_records_refill_target_aucs(fast_models):
     bundle = make_bundle()
     pool = [f"f{i}" for i in range(8)]
     # refills map to informative-ish columns so instrumentation has something to measure

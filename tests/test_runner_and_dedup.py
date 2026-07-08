@@ -18,7 +18,7 @@ def _cfg(tmp_path, **pool_kwargs) -> RunConfig:
     )
 
 
-def test_runner_end_to_end_with_fakes(tmp_path):
+def test_runner_end_to_end_with_fakes(tmp_path, fast_models):
     cfg = _cfg(tmp_path)
     proposer = FakeProposer(
         generate_batches=[[f"f{i}" for i in range(8)]],
@@ -41,7 +41,7 @@ def test_runner_end_to_end_with_fakes(tmp_path):
     assert (out / "costs.json").exists() and (out / "config.yaml").exists()
 
 
-def test_runner_fixed_hypotheses_always_kept(tmp_path):
+def test_runner_fixed_hypotheses_always_kept(tmp_path, fast_models):
     cfg = _cfg(tmp_path, fixed_hypotheses=["f0 manual hypothesis"])
     proposer = FakeProposer(
         generate_batches=[[f"f{i}" for i in range(1, 8)]],
@@ -55,7 +55,7 @@ def test_runner_fixed_hypotheses_always_kept(tmp_path):
     assert "f0 manual hypothesis" in proposer.generate_calls[0]["avoid"]
 
 
-def test_runner_from_run_reuses_pool_without_llm(tmp_path):
+def test_runner_from_run_reuses_pool_without_llm(tmp_path, fast_models):
     cfg = _cfg(tmp_path)
     proposer = FakeProposer(generate_batches=[[f"f{i}" for i in range(8)]], refill_batches=[[], []])
     run(cfg, scorer=FakeScorer(), proposer=proposer, deduper=TextOnlyDeduper(), bundle=make_bundle())
