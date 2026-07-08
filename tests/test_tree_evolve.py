@@ -59,7 +59,7 @@ def _cfg(**tree_kwargs):
         leaf_shots=6,
         leaf_min_samples=15,
         max_depth=3,
-        min_samples_leaf=20,
+        min_samples_leaf=5,
         patience=2,
     )
     defaults.update(tree_kwargs)
@@ -75,14 +75,19 @@ def test_entropy_and_split_gain():
     assert _best_split_gain(np.full(20, 0.5), y, _entropy(y)) == 0.0  # constant -> no gain
 
 
-def test_pick_leaf_targets_impurity_and_skips_pure():
-    y = np.array([0, 0, 1, 1] * 5)  # 20 samples
+def test_pick_leaf_targets_error_mass_and_skips_pure_and_outliers():
     leaf = np.array([1] * 10 + [2] * 10)
-    # leaf 1 pure (all class 0), leaf 2 impure -> pick leaf 2
+    # leaf 1 pure (all class 0), leaf 2 mixed 5/5 -> pick leaf 2 (5 errors)
     y2 = np.array([0] * 10 + [0, 1] * 5)
-    assert _pick_leaf(leaf, y2, min_samples=5) == 2
-    assert _pick_leaf(leaf, np.zeros(20, dtype=int), min_samples=5) is None  # all pure
-    assert _pick_leaf(leaf, y, min_samples=50) is None  # none big enough
+    assert _pick_leaf(leaf, y2, min_samples=5, min_errors=2) == 2
+    assert _pick_leaf(leaf, np.zeros(20, dtype=int), min_samples=5, min_errors=2) is None  # all pure
+    assert _pick_leaf(leaf, y2, min_samples=50, min_errors=2) is None  # none big enough
+    # outlier leaf: 9 of class 0 + 1 stray -> 1 error < min_errors -> skipped, not targeted
+    y3 = np.array([0] * 9 + [1] + [0, 1] * 5)
+    assert _pick_leaf(leaf, y3, min_samples=5, min_errors=2) == 2
+    # error mass beats entropy ranking: 50/50 pair (5 errors) over 3-way-mixed-but-dominated leaf
+    y4 = np.array([0, 1] * 5 + [0] * 6 + [1, 1, 2, 2])  # leaf1: 5 errors; leaf2: 4 errors
+    assert _pick_leaf(leaf, y4, min_samples=5, min_errors=2) == 1
 
 
 def test_tree_evolve_grows_pool_with_separating_hypothesis():

@@ -50,28 +50,30 @@ def _best_split_gain(scores: np.ndarray, y: np.ndarray, h0: float, n_thresholds:
     return best
 
 
-def _pick_leaf(leaf_id: np.ndarray, y: np.ndarray, min_samples: int, gate: float = 0.0) -> int | None:
-    """The impure leaf with the most total confusion (entropy x count) and enough examples.
-
-    `gate` = the tree's min_impurity_decrease: a leaf where even a PERFECT split cannot clear it
-    ((n/N) x H < gate) is unsplittable by construction — targeting it burns LM calls on a win the
-    tree would be forbidden to use (measured 2026-07-07: a 0.00197 weighted gain lost to a 0.002
-    gate and froze the frontier)."""
+def _pick_leaf(
+    leaf_id: np.ndarray, y: np.ndarray, min_samples: int, gate: float = 0.0, min_errors: int = 10
+) -> int | None:
+    """The leaf whose majority vote makes the most ERRORS (n - majority count) — the quantity a
+    resolved leaf actually repays in accuracy. Entropy x count was tried first and failed two
+    ways (measured 2026-07-07): it over-ranked many-way-mixed leaves, and at low impurity gates
+    it targeted outlier leaves (e.g. LOC:60/ENTY:1 — 1 error, and min_samples_leaf makes the
+    stray unsplittable anyway). `min_errors` (~min_samples_leaf) is the floor that makes a leaf
+    both worth fixing and physically splittable; `gate` skips leaves where even a PERFECT split
+    couldn't clear the tree's min_impurity_decrease."""
     n_total = len(y)
-    best, best_score = None, 0.0
+    best, best_score = None, 0
     for lid in np.unique(leaf_id):
         mask = leaf_id == lid
         n = int(mask.sum())
         if n < min_samples:
             continue
-        h = _entropy(y[mask])
-        if h <= 0.0:  # pure leaf: nothing to split
+        errors = n - int(np.bincount(y[mask]).max())
+        if errors < min_errors:  # outlier contamination, not confusion (also unsplittable)
             continue
-        if (n / n_total) * h < gate:  # even a perfect split couldn't clear the tree's gate
+        if (n / n_total) * _entropy(y[mask]) < gate:  # perfect split couldn't clear the gate
             continue
-        score = h * n
-        if score > best_score:
-            best, best_score = int(lid), score
+        if errors > best_score:
+            best, best_score = int(lid), errors
     return best
 
 
@@ -203,7 +205,13 @@ def tree_evolve(
             random_state=seed,
         ).fit(feat, y)
         leaf_id = tree.apply(feat)
-        target = _pick_leaf(leaf_id, y, tcfg.leaf_min_samples, gate=tcfg.min_impurity_decrease)
+        target = _pick_leaf(
+            leaf_id,
+            y,
+            tcfg.leaf_min_samples,
+            gate=tcfg.min_impurity_decrease,
+            min_errors=tcfg.min_samples_leaf,
+        )
         if target is None:
             print("--- tree-evolve stop: no impure leaf with enough samples", flush=True)
             break
@@ -217,12 +225,15 @@ def tree_evolve(
         shot_idx = _sample_shots(leaf_local, y, tcfg.leaf_shots, rng)
         examples = [f"[{names[y[i]]}] {texts[i][:400]}" for i in shot_idx]
 
-        # the gain a candidate must reach for the refit tree to be ALLOWED to use it
-        required_gain = tcfg.min_impurity_decrease * len(texts) / (int(mask.sum()) * _entropy(leaf_y))
+        # the fraction of THIS LEAF's entropy a candidate must remove for the refit tree to be
+        # ALLOWED to use it (the gate is absolute: min_impurity_decrease x N total bits)
+        n_leaf, h_leaf = int(mask.sum()), _entropy(leaf_y)
+        required_frac = tcfg.min_impurity_decrease * len(texts) / (n_leaf * h_leaf)
+        errors = n_leaf - int(np.bincount(leaf_y).max())
         print(
             f"--- tree-evolve round {round_i}: targeting leaf {target} "
-            f"(n={int(mask.sum())}, H={_entropy(leaf_y):.3f}, {'/'.join(classes_present)}) "
-            f"| gain needed to split: {required_gain:.3f}",
+            f"(n={n_leaf}, errors={errors}, H={h_leaf:.3f} bits, {'/'.join(classes_present)}) "
+            f"| split gate: must remove {required_frac:.0%} of this leaf's entropy",
             flush=True,
         )
         evaluate_fn = _make_evaluator(scorer, leaf_texts, leaf_y, pool, x[mask])
