@@ -2178,3 +2178,40 @@ Outputs: results/raw/probe_head_channels/{results.jsonl, <ds>__<size>.json}; fig
 head_channel_separation_<ds> (separation-per-head vs size + accuracy twin-axis) and
 head_channel_dist_<ds> (matched-vs-mismatched histogram grid, rows=size × cols=head). Pure local
 scoring, one GPU; no LLM spend.
+
+## 2026-07-09 — VERDICT: per-head channel probe across finecat sizes (vs pre-registered reads)
+All 20 cells (4 datasets × 5 sizes) ran clean. Separation = 2·|AUC−0.5|; acc = downstream RF.
+                       -xxs   -xs    -s    -m    -l      | acc xxs→l
+  sst2   entail        0.25  0.25  0.48  0.84  0.91      | 0.687→0.952
+         contradict    0.33  0.40  0.62  0.91  0.94      |  (leads entail at EVERY size)
+         neutral       0.01  0.05  0.13  0.33  0.53      |  (dead → real channel)
+  trec   entail        0.06  0.20  0.32  0.51  0.51      | 0.524→0.912
+         contradict    0.04  0.16  0.33  0.50  0.50      |
+         neutral       0.02  0.16  0.01  0.14  0.25      |
+  ag_news entail       0.50  0.59  0.63  0.87  0.87      | 0.723→0.882
+         neutral       0.32  0.47  0.33  0.55  0.69      |  (strongest neutral of all 4)
+  goemot entail        0.22  0.25  0.37  0.41  0.41      | 0.420→0.517 (flat, m→l REGRESSES)
+         neutral       0.03  0.02  0.03  0.05  0.17      |
+
+FINDINGS (against the pre-registered reads):
+1. entail is NOT universally the primary channel. On sst2 CONTRADICT out-separates entail at every
+   size (0.94 vs 0.91 @ -l); on goemotions contradict ≥ entail throughout. entail only clearly
+   leads on trec/ag_news. → "score which head leads" is task-dependent; a priori you don't know.
+2. NEUTRAL is a real third channel, but only where the task leaves discriminative neither-side mass:
+   strong on ag_news (0.69) and sst2 (0.53) @ -l, weak on trec (0.25), near-dead on goemotions
+   (0.17). It grows monotonically with size on all four. → Lee's leaf-level 3-class push VALIDATED
+   systematically, and bounded: neutral is worth a feature on topic/sentiment, not on emotion.
+3. contrast ≈ max(entail, contradict) almost everywhere. So the entail_contradict score_mode's
+   second head earns its keep as INSURANCE (contradict leads on sst2; entail leads on ag_news) — not
+   because the two are jointly super-additive. Confirms keeping both heads as the default width.
+4. Capacity-limited vs task-limited cleanly separates in the per-head view: trec/sst2/ag_news show
+   steep separation growth tracking steep accuracy (capacity buys signal); goemotions caps ~0.40 by
+   -s and accuracy is low + REGRESSES -m→-l (0.519→0.517). This is the mechanism behind the paper's
+   GoEmotions de-saturation pre-registration: it is task/label-limited, not encoder-limited — pouring
+   encoder capacity (or generation) at emotion is futile, as suspected.
+5. CAVEAT worth a follow-up: on trec the single-head separation SATURATES -m→-l (entail 0.51 flat)
+   while accuracy still climbs 0.830→0.912. That -m→-l accuracy gain is NOT sharper individual heads
+   — it's the RF exploiting the joint 25-hyp distribution / better calibration. Single-head AUC is a
+   floor on the usable signal, not the whole of it.
+Figures: head_channel_{separation,dist}_<ds>.{png,pdf}. Pure local, one GPU, no LLM spend. Ran under
+a niced retry launcher on the contended box (one transient import-OOM before the box freed up).
