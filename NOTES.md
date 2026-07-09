@@ -2259,3 +2259,32 @@ CONSEQUENCES:
    result — the neutral column flagged a good split hypothesis to PROPOSE) but not as an extra
    downstream classifier feature. Different uses; both notes stand.
 Cost: pure local, cache reused, no LLM spend.
+
+## 2026-07-09 — VERDICT: did generation/evolution move the per-head profile toward "better"? (Bradley)
+Per-head profile of hypothesis pools at fixed -l over the TREC test set. Tags UNIFORM across pools
+(arg-max train-entail, the derive_tags instrument) so movement reflects hypotheses not tagging.
+A) GENERATION PIPELINE (static pools): expert(hand) → gen256(raw LM) → gen_static → gen_evolved
+  stage          n   acc   E|match  C|mis  N|mis  abstain  ent_sep
+  expert(hand)  25  0.912   0.452   0.806  0.026   0.032    0.377
+  gen256(raw)  256  0.926   0.471   0.714  0.073   0.093    0.354
+  gen_static    64  0.922   0.550   0.745  0.045   0.057    0.415
+  gen_evolved   62  0.920   0.547   0.701  0.097   0.122    0.484
+  → YES on the profile: matched entailment RISES (0.45→0.55), off-class contradict FALLS
+    (0.81→0.70) with neutral RISING (0.03→0.10) — abstain ratio 0.032→0.122 (~4×). Entail
+    separation 0.38→0.48 (raw 256 dips to 0.35 — big noisy pool; SELECTION is what sharpens it).
+    The LM writes, and CV-selection/evolution keeps, cleaner "property-present / abstain-when-absent"
+    probes than the terse hand-written pool that over-claims contradiction off-class.
+  → BUT accuracy is FLAT (0.912–0.926 = noise): TREC@-l is at ceiling. So this is a CALIBRATION /
+    logloss improvement, not accuracy — which is exactly the tree-evolve line's standing verdict
+    ("accuracy flat vs bar, logloss −15%"). The contradict→neutral shift + higher matched entail =
+    better-calibrated probs at equal accuracy. This probe is the MECHANISM behind that logloss win.
+B) TREE-EVOLVE ROUND TRAJECTORY (seeds 7/17/27, round-by-round): per-head profile is essentially
+   FLAT across rounds; the RF-accuracy gain is FRONT-LOADED (round 0→2, tiny seed pool → usable),
+   not a gradual per-head sharpening. E|matched even slightly DECLINES from round 0 (0.63→0.56) as
+   growth proceeds. Reason (ties to the FRAMING PROBE): tree-growth adds CONTRASTIVE leaf-split
+   hypotheses that deliberately sit near the encoder's uncertainty region (boundary probes, lower
+   entail, more neutral) to carve specific confusions — it moves toward BOUNDARY hypotheses, NOT
+   higher-entailment ones. So "as we go" the pool gets more discriminative at hard leaves without
+   raising the aggregate entailment; the two pool-construction routes optimize different things.
+Figures: pool_evolution_trec.{png,pdf} (pipeline), pool_trajectory_trec.{png,pdf} (rounds). Pure
+local, cache reused, no LLM spend.

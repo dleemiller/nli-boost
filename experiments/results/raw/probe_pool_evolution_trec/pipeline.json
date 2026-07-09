@@ -1,0 +1,74 @@
+{
+  "dataset": "trec",
+  "encoder": "dleemiller/finecat-nli-l",
+  "stages": [
+    {
+      "label": "expert (hand)",
+      "matched": {
+        "entail": 0.4521597623825073,
+        "neutral": 0.07243748754262924,
+        "contradict": 0.4754027724266052
+      },
+      "mismatched": {
+        "entail": 0.1680545210838318,
+        "neutral": 0.02632412128150463,
+        "contradict": 0.8056213855743408
+      },
+      "entail_separation": 0.3767928770383475,
+      "abstain_ratio_mismatched": 0.03164164126685513,
+      "n_hyp": 25,
+      "acc": 0.912
+    },
+    {
+      "label": "gen256 (raw LM)",
+      "matched": {
+        "entail": 0.4707988202571869,
+        "neutral": 0.12114714086055756,
+        "contradict": 0.40805408358573914
+      },
+      "mismatched": {
+        "entail": 0.21266554296016693,
+        "neutral": 0.07292961329221725,
+        "contradict": 0.7144048810005188
+      },
+      "entail_separation": 0.35433115223876754,
+      "abstain_ratio_mismatched": 0.09262850011129012,
+      "n_hyp": 256,
+      "acc": 0.926
+    },
+    {
+      "label": "gen_static",
+      "matched": {
+        "entail": 0.5500933527946472,
+        "neutral": 0.07061495631933212,
+        "contradict": 0.37929168343544006
+      },
+      "mismatched": {
+        "entail": 0.20970360934734344,
+        "neutral": 0.04510669782757759,
+        "contradict": 0.7451897859573364
+      },
+      "entail_separation": 0.4150447634672314,
+      "abstain_ratio_mismatched": 0.057075665592678716,
+      "n_hyp": 64,
+      "acc": 0.922
+    },
+    {
+      "label": "gen_evolved",
+      "matched": {
+        "entail": 0.5466009974479675,
+        "neutral": 0.14023880660533905,
+        "contradict": 0.3131602108478546
+      },
+      "mismatched": {
+        "entail": 0.20146697759628296,
+        "neutral": 0.09735078364610672,
+        "contradict": 0.7011821866035461
+      },
+      "entail_separation": 0.4835336407387967,
+      "abstain_ratio_mismatched": 0.12191204029518159,
+      "n_hyp": 62,
+      "acc": 0.92
+    }
+  ]
+}
