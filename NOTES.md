@@ -2230,3 +2230,32 @@ either way, so keep entail_contradict as the safe default and drop the "add expl
 Protocol = identical to abl_trec_scoremode: -l encoder, axis score_mode, train 100/class, 5 seeds,
 test 2000/seed 7. run-ids abl_sst2_scoremode, abl_ag_news_scoremode. Cache reused from the probe
 (test pairs already scored). Pure local, no LLM spend.
+
+## 2026-07-09 — VERDICT: score_mode ablation sst2 + ag_news — PREDICTION FALSIFIED (neutral doesn't convert)
+Mean acc over 5 seeds (−l, 100/class, test 2000/seed 7), with the pre-registered TREC reference:
+  dataset   entail   contrast  ent_contr   EC−contrast   neutral_sep@l
+  trec      0.8860   0.8876    0.8920        +0.0044        0.247
+  sst2      0.9431   0.9518    0.9475        −0.0044        0.528
+  ag_news   0.8818   0.8828    0.8823        −0.0005        0.693
+Per-seed std ~0.003–0.005. Prediction was: bigger EC−contrast gap where neutral separates. RESULT:
+the OPPOSITE / null. ag_news (strongest neutral, 0.69) is a dead heat across all three modes
+(spread 0.001, << noise). sst2 (neutral 0.53) — the LEANEST mode wins: contrast 0.9518 (lowest
+variance) > entail_contradict 0.9475 > entail 0.9431; paired EC−contrast negative in 3/5 seeds.
+So neutral-axis matched/mismatched SEPARATION does NOT convert to a downstream accuracy gain.
+
+WHY (the real lesson): matched-vs-mismatched separation of a channel ≠ its class-discriminative
+value. The probe pooled all-hypothesis pairs and asked "does head h know when a hypothesis fits a
+text." Classification instead uses the RELATIVE entailment pattern across the pool to pick a class.
+Neutral separates ("not this class") but that is already encoded by low entail — redundant for the
+decision. Separation is necessary, not sufficient.
+
+CONSEQUENCES:
+1. "Add an explicit neutral feature / 3-wide score_mode" idea is DEAD — buys nothing; don't build it.
+2. entail_contradict stays the safe default (never worst, within noise of best) — insurance, not a
+   lever. On sst2 the 1-D `contrast` is actually best at low N (fewer features → less overfit;
+   matches the SST-2 mechanism probe's "~1-D sentiment axis"). Reasonable to prefer contrast on
+   clearly-polar binary tasks.
+3. Reconciles with the FRAMING PROBE: neutral is useful for SELECTING/FRAMING hypotheses (Lee's leaf
+   result — the neutral column flagged a good split hypothesis to PROPOSE) but not as an extra
+   downstream classifier feature. Different uses; both notes stand.
+Cost: pure local, cache reused, no LLM spend.
