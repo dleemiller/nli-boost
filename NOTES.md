@@ -2149,3 +2149,32 @@ ACTION: SplitLeaf prompt now leads with the CONTRASTIVE angle (with the measured
 instruction's evidence). Not yet re-run (GPU reserved for Lee's training per his stop order) —
 rerunning a seed with the new prompt is the next cheap experiment when he frees the GPU.
 Probe cost: 368 GPU pairs (~seconds).
+
+## 2026-07-09 — LAUNCH: per-channel (per-head) signal probe across the 5 finecat sizes (Bradley)
+Generalizes the FRAMING PROBE finding above — that on the stuck TREC leaf BOTH the entail AND the
+neutral head cleared the split bar at -l — from one leaf / one encoder to a systematic per-head
+distribution across finecat {xxs, xs, s, m, l}. Script: experiments/scripts/probe_head_channels.py.
+QUESTION per (dataset, size, head): how well does head h ALONE separate MATCHED (text's true class
+== hypothesis's intended class) from MISMATCHED pairs, over the full fixed test set (2000, seed 7,
+LM-free)? Metric = separation 2·|AUC−0.5| ∈ [0,1] per channel ∈ {entail, neutral, contradict,
+contrast=entail−contradict}, plus signed AUC / Cohen's d and matched-vs-mismatched histograms. The
+downstream RF accuracy (entail_contradict features, fixed 100/class train, mirrors
+encoder_size_sweep) is overlaid so the mechanism (which channel sharpens) can be read against the
+outcome — the encoder resource curve is the size-analog of the learning curve. Datasets: trec, sst2,
+goemotions, ag_news (tags = real class names; banking77/clinc150 excluded — tags only representative).
+PRE-REGISTERED reads:
+  * entail is the primary channel; if its separation climbs steeply xxs→l the family is
+    capacity-limited there (matches METHOD.md's -m→-l = +5pts). Flat-and-high = already saturated.
+  * neutral separation > ~0.1 that GROWS with size = a real third channel (Lee's 3-class push,
+    validated systematically, not just at one leaf); ~0 and flat = neutral is only uncertainty mass.
+  * contradict/contrast carrying separation ORTHOGONAL to entail = the entail_contradict score_mode
+    (2× width) earns its keep vs plain entail; if contrast ≈ entail everywhere, the extra head is
+    redundant on these tasks.
+  * the channel that tracks the accuracy overlay across sizes IS the mechanism of the size gain.
+Early smoke (sst2 -xxs only): contradict 0.33 / contrast 0.31 OUT-separate entail 0.25, neutral
+0.009 (dead) — at the smallest encoder the discriminative signal on sentiment lives in the
+contradict head, not entail; whether entail/neutral wake up with capacity is the thing to watch.
+Outputs: results/raw/probe_head_channels/{results.jsonl, <ds>__<size>.json}; figures
+head_channel_separation_<ds> (separation-per-head vs size + accuracy twin-axis) and
+head_channel_dist_<ds> (matched-vs-mismatched histogram grid, rows=size × cols=head). Pure local
+scoring, one GPU; no LLM spend.
