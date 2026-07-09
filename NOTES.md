@@ -2149,3 +2149,26 @@ ACTION: SplitLeaf prompt now leads with the CONTRASTIVE angle (with the measured
 instruction's evidence). Not yet re-run (GPU reserved for Lee's training per his stop order) —
 rerunning a seed with the new prompt is the next cheap experiment when he frees the GPU.
 Probe cost: 368 GPU pairs (~seconds).
+
+## 2026-07-08 — REVIEW of cohort (Bradley Smith) contribution — pulled to main, VERDICT: sound, merge-quality
+Scope: 6 commits, 185 files (~19k lines): paper draft, low-N/tau "paper line", 3 new datasets, cache
+robustness, status daemon. Reviewed CPU-only (Lee's GPU-training hold in effect).
+SHIP-CODE (the part that matters):
+- data.py +299: banking77 / clinc150 / goemotions. VERIFIED hardcoded ClassLabel orders EXACT-MATCH
+  the real HF datasets (all 3, incl clinc's 151=150+oos and goemotions 7-way Ekman) — the silent-
+  mislabel trap is clear. multilabel goemotions handled via a pre-collapsed single-label mirror;
+  oos kept as its own class — both documented honestly in-code.
+- cache.py: WAL-probe on a throwaway file (ZFS/NFS accept the pragma then fail first write, poisoning
+  the handle) with fallback to DELETE. Sound; closes the handle on failure. MINOR: concurrent runs
+  sharing a cache dir race on the single .wal_probe.sqlite (worst case -> DELETE fallback; low sev).
+- config.py/init/pyproject: dataset literal + version 0.4.0 + matplotlib dev dep. Fine.
+- src ruff clean; full suite 48 pass.
+PAPER/EXPERIMENTS: protocol is honest — fixed 500 test never seen in generation, head selected by
+CV-on-train, 10 seeds, LM-free baselines. Leakage scan (fit-on-test / select-by-test) CLEAN. Headline
+0.954 HV+RF traces exactly to committed table artifact. No cherry-pick/dropped-seed language.
+Claims hedged (HV converges to 0.954 vs fine-tune 0.964, not "beats"; regime-crossover framing).
+GAPS (non-blocking): (1) ZERO tests for 299 lines of new dataset code — add a (network, skipif)
+test asserting ClassLabel order == hardcoded, since that's the whole risk; (2) cache probe race.
+NET: high-quality, honest, correctly-orderd. The low-N prior-head result (0.594 zero-label vs
+0.428 zero-shot-NLI) is the strongest new finding and aligns with the tree-evolve "natural home =
+low-N" note. Recommend keep. Flagged gaps to Bradley/Lee.
