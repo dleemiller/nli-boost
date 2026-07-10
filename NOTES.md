@@ -2335,3 +2335,13 @@ FINDINGS:
 RECOMMENDATION: use component-summarization when you WANT a compact human-readable axis-set
 (strict-16, no refine, ~0.94 acc / 0.945 f1); use the pool (abundance+dedup) when you want max
 accuracy (~0.96). Line answered end-to-end; stopping here per Lee.
+
+## 2026-07-10 — BUILT the accordion (expand<->compact loop), CPU-tested, not yet run
+train/accordion.py: each round LLM-generates gen_size hyps (round 0 = broad generate; later =
+refill targeting the kept set's confusion hot-spots + avoid survivors), pools with kept, behavioral-
+dedups, sets keep-count = EFFECTIVE RANK (components for var_threshold of variance) of the deduped
+matrix, keeps one CV-best MEDOID per cluster (coverage). Stops when kept-count plateaus (patience).
+Keep-count is DATA-DRIVEN (effective rank grows then saturates) — answers "how many to keep". Uses a
+train subsample for internal decisions. experiments/scripts/run_accordion.py = CLI (saves kept pool
++ history). tests/test_accordion.py: effective_rank, keep_representatives, fake end-to-end plateau.
+GPU-gated only for scoring each round's new hyps; queued for GPU-free. Full suite green.
