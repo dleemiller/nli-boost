@@ -2288,3 +2288,20 @@ B) TREE-EVOLVE ROUND TRAJECTORY (seeds 7/17/27, round-by-round): per-head profil
    raising the aggregate entailment; the two pool-construction routes optimize different things.
 Figures: pool_evolution_trec.{png,pdf} (pipeline), pool_trajectory_trec.{png,pdf} (rounds). Pure
 local, cache reused, no LLM spend.
+
+## 2026-07-09 — CONFIRMED: the pool-evolution profile gain IS calibration, not accuracy (logloss/ECE)
+Follow-up measuring logloss + ECE per pipeline stage (was asserting "calibration not accuracy" from
+the per-head profile alone; now measured directly). TREC, -l, fixed 100/class train:
+  stage          n   acc   logloss   ECE
+  expert(hand)  25  0.912   0.391   0.144
+  gen256(raw)  256  0.926   0.328   0.134
+  gen_static    64  0.922   0.343   0.132
+  gen_evolved   62  0.920   0.348   0.127
+Accuracy flat (0.912–0.926) but ECE drops MONOTONICALLY 0.144→0.127 (−12%) and logloss −16% from
+hand-written (0.391) to generated (0.328), holding at −11% for evolved (0.348) — matches the
+tree-evolve line's documented "−15% logloss, flat accuracy". CLAIM CONFIRMED. Nuance: logloss is
+lowest at the raw 256-pool (more hyps → smoother probs); evolution trades a hair of logloss for the
+BEST ECE (0.127), BEST entail separation (0.484), and 4× fewer hypotheses — evolution = compression
++ calibration. Closes the loop: the matched-entail↑ / contradict→neutral profile shift measured
+earlier is the mechanism, and it cashes out as lower logloss/ECE, not higher accuracy (TREC@-l
+ceiling). Pure local, cache reused, no LLM spend.

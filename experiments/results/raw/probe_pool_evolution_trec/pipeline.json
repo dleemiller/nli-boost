@@ -17,7 +17,9 @@
       "entail_separation": 0.3767928770383475,
       "abstain_ratio_mismatched": 0.03164164126685513,
       "n_hyp": 25,
-      "acc": 0.912
+      "acc": 0.912,
+      "logloss": 0.3907129507452943,
+      "ece": 0.1440000000000001
     },
     {
       "label": "gen256 (raw LM)",
@@ -34,7 +36,9 @@
       "entail_separation": 0.35433115223876754,
       "abstain_ratio_mismatched": 0.09262850011129012,
       "n_hyp": 256,
-      "acc": 0.926
+      "acc": 0.926,
+      "logloss": 0.32751957855823705,
+      "ece": 0.13378666666666672
     },
     {
       "label": "gen_static",
@@ -51,7 +55,9 @@
       "entail_separation": 0.4150447634672314,
       "abstain_ratio_mismatched": 0.057075665592678716,
       "n_hyp": 64,
-      "acc": 0.922
+      "acc": 0.922,
+      "logloss": 0.34332982949504665,
+      "ece": 0.1322666666666666
     },
     {
       "label": "gen_evolved",
@@ -68,7 +74,9 @@
       "entail_separation": 0.4835336407387967,
       "abstain_ratio_mismatched": 0.12191204029518159,
       "n_hyp": 62,
-      "acc": 0.92
+      "acc": 0.92,
+      "logloss": 0.3484933067074635,
+      "ece": 0.12668
     }
   ]
 }

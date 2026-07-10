@@ -93,12 +93,13 @@ def profile(probs: np.ndarray, matched: np.ndarray) -> dict:
             "abstain_ratio_mismatched": float(abstain)}
 
 
-def rf_acc(fz, pool, raw, tr_idx) -> float:
+def rf_metrics(fz, pool, raw, tr_idx) -> dict:
+    """Downstream RF (entail_contradict, fixed train) — accuracy AND calibration (logloss/ECE)."""
     Xtr = fz.features([raw.train_texts[i] for i in tr_idx], pool, "entail_contradict")
     Xte = fz.features(list(raw.test_texts), pool, "entail_contradict")
     head = RandomForestClassifier(n_estimators=300, random_state=0, n_jobs=4).fit(Xtr, raw.y_train[tr_idx])
-    return float(metrics.compute_metrics(raw.y_test, head.predict_proba(Xte).argmax(1),
-                                         n_classes=raw.n_classes)["accuracy"])
+    proba = head.predict_proba(Xte)
+    return metrics.compute_metrics(raw.y_test, proba.argmax(1), proba, n_classes=raw.n_classes)
 
 
 def eval_pool(pool, fz, raw, tr_idx, *, with_acc=True) -> dict:
@@ -109,7 +110,10 @@ def eval_pool(pool, fz, raw, tr_idx, *, with_acc=True) -> dict:
     prof = profile(probs, test_names[:, None] == tags[None, :])
     prof["n_hyp"] = len(pool)
     if with_acc:
-        prof["acc"] = rf_acc(fz, pool, raw, tr_idx)
+        m = rf_metrics(fz, pool, raw, tr_idx)
+        prof["acc"] = m["accuracy"]
+        prof["logloss"] = m["log_loss"]
+        prof["ece"] = m["ece"]
     return prof
 
 
@@ -157,11 +161,14 @@ def main() -> None:
         {"dataset": ds, "encoder": ENCODER, "stages": [{"label": l, **r} for l, r in zip(labels, res)]},
         indent=2))
     print(f"\n===== {ds}: per-head profile across generation/evolution stages =====")
-    print(f"{'stage':<16}{'n':>5}{'acc':>7}{'E|match':>9}{'C|mis':>8}{'N|mis':>8}{'abstain':>9}{'ent_sep':>9}")
+    print(f"{'stage':<16}{'n':>5}{'acc':>7}{'logloss':>9}{'ece':>7}{'E|match':>9}{'C|mis':>8}"
+          f"{'N|mis':>8}{'abstain':>9}{'ent_sep':>9}")
     for l, r in zip(labels, res):
-        print(f"{l:<16}{r['n_hyp']:>5}{r['acc']:>7.3f}{r['matched']['entail']:>9.3f}"
-              f"{r['mismatched']['contradict']:>8.3f}{r['mismatched']['neutral']:>8.3f}"
-              f"{r['abstain_ratio_mismatched']:>9.3f}{r['entail_separation']:>9.3f}")
+        print(f"{l:<16}{r['n_hyp']:>5}{r['acc']:>7.3f}{r['logloss']:>9.3f}{r['ece']:>7.3f}"
+              f"{r['matched']['entail']:>9.3f}{r['mismatched']['contradict']:>8.3f}"
+              f"{r['mismatched']['neutral']:>8.3f}{r['abstain_ratio_mismatched']:>9.3f}"
+              f"{r['entail_separation']:>9.3f}")
+    print("  → calibration check: does logloss/ECE DROP across stages while accuracy stays flat?")
 
     # ---- Part B: tree-evolve round trajectory (per seed) ----
     traj = {}
