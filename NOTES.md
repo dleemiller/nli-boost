@@ -2210,3 +2210,16 @@ success = the 7-hyp summary lands within ~0.02 of 0.960 (it's 7 vs 62 — expect
 question is how much accuracy survives 9x compression to human-named axes); strong = >=0.94 at 7 hyps
 (near-full accuracy from a 7-sentence interpretable model). GPU-gated (needs to score 7 new hyps x
 5452+2000 texts, ~cheap); queued for GPU-free. No GPU touched this cycle.
+
+## 2026-07-09 — hf-inference offload: NOT VIABLE for our pair scoring (investigated, dead end)
+Idea: run finecat-nli-l on HF serverless to score without the local GPU (unblock the queue during
+Lee's training). Findings: model IS warm/live on hf-inference (text-classification, sentence-
+transformers). BUT the hosted pipeline is SINGLE-SEQUENCE only — our method needs (premise=text,
+hypothesis) PAIR scoring -> 3 logits, and there is no path to feed the second text:
+  - client.text_classification(text) takes one string; InferenceClient.post removed in hub 1.22;
+    sentence_similarity returns a scalar not the 3-class distribution.
+  - raw router payload {"inputs":{"text":..,"text_pair":..}} -> HTTP 400 "missing 'inputs'".
+  - single-premise-only returns 3 classes but WRONG numbers (neutral 0.67 vs the true pair
+    contradict 0.87) because it scores one sequence through a cross-encoder that needs two.
+Only working remote option would be a DEDICATED HF Inference Endpoint with a custom CrossEncoder
+handler (paid + setup) — not a serverless snippet. Local GPU stays the only pair-scoring path.
