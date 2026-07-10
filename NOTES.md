@@ -2223,3 +2223,16 @@ hypothesis) PAIR scoring -> 3 logits, and there is no path to feed the second te
     contradict 0.87) because it scores one sequence through a cross-encoder that needs two.
 Only working remote option would be a DEDICATED HF Inference Endpoint with a custom CrossEncoder
 handler (paid + setup) — not a serverless snippet. Local GPU stays the only pair-scoring path.
+
+## 2026-07-09 (correction) — my hf-inference zero-shot test was BART, not finecat (Lee caught it)
+RETRACTION: the prior entry's "zero-shot works but numbers don't match local (0.064 vs 0.008)" was
+INVALID — my zero_shot_classification calls omitted model=, so InferenceClient defaulted to
+facebook/bart-large-mnli. That compared BART's zero-shot to finecat's local scores (two models). The
+"doesn't match" conclusion is withdrawn.
+What IS confirmed: finecat served as text-classification cannot do pair scoring (real finecat pair
+payload -> 400). Lee changed the card pipeline_tag to zero-shot-classification (correct tag for an
+NLI model), BUT the served task still reports text-classification (propagation lag) — finecat
+zero-shot currently 400s ("unexpected kwarg candidate_labels"). OPEN + UNTESTED: once the backend
+serves zero-shot, does finecat's remote zero-shot entail == our local CrossEncoder entail? If yes,
+remote is a real cache-compatible offload; if no (e.g. 2-class renorm dropping neutral), it's a
+separate 2-class track. Re-test when SERVED task flips to zero-shot-classification.
