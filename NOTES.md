@@ -2236,3 +2236,42 @@ zero-shot currently 400s ("unexpected kwarg candidate_labels"). OPEN + UNTESTED:
 serves zero-shot, does finecat's remote zero-shot entail == our local CrossEncoder entail? If yes,
 remote is a real cache-compatible offload; if no (e.g. 2-class renorm dropping neutral), it's a
 separate 2-class track. Re-test when SERVED task flips to zero-shot-classification.
+
+## 2026-07-09 — ABUNDANCE-then-PRUNE on the 128 cached TREC hyps (GPU-free; Lee: "138 then")
+512 needs generating+scoring ~374 new hyps (~2.8M pairs, ~2h GPU) — blocked by Lee's training. So
+use the 128 TREC hypotheses already fully scored train+test on -l (union of all runs' pools). Fully
+GPU-free (scores cached): baseline + SUBSET-pruning bake-off. (Component-summarization/regeneration
+is excluded here — new sentences need GPU scoring; this is subset selection only.)
+Representation: entail_contradict (2-class), matching trec_full's 0.964 for comparability.
+BASELINES: curated-32 = 0.960, trec_full-62 = 0.964 (both prior, same test/seed).
+PRE-REGISTERED:
+- 128 unpruned: RF is redundancy-robust, so expect >= 0.960; question is whether abundance HELPS
+  (>0.964) or redundancy/noise is neutral. Guess 0.960-0.966.
+- prune 128->32 (selection by CV/importance on TRAIN only, one test eval each):
+  methods = covariance-dedup, RF-importance top-k, agglomerative-cluster->medoid.
+  SUCCESS for the "abundance+prune" thesis = a pruned-32 >= 0.962 (beats curated-32's 0.960 and
+  matches trec_full-62 at half the pool). If pruned-32 ~= curated-32, abundance doesn't help; if
+  128-unpruned is best, pruning isn't worth it and RF just absorbs redundancy.
+Honest protocol: pool_cv on the fixed 500... (test_size 2000 here); count/selection from train only.
+
+## 2026-07-09 — ABUNDANCE-PRUNE VERDICT (128 cached TREC hyps, fixed-RF head, GPU-free)
+NOTE: fixed RF-300 head across all rows (fair method comparison, ~0.5pt under the grid-selected
+0.960/0.964 baselines — so compare WITHIN the table, not to the grid numbers).
+  method                 k    acc     f1     logloss  cv_tr
+  abundance-128        128  0.9620  0.9428  0.1681   0.9242   <- best acc & logloss
+  covariance-dedup     116  0.9620  0.9366  0.1763   0.9246   <- 12 dupes dropped, identical acc
+  rf-importance->32     32  0.9560  0.9178  0.2116   0.9120
+  cluster-medoid->32    32  0.9540  0.9324  0.2016   0.9066
+READS (all within-table, honest):
+1. ABUNDANCE HELPS / RF is redundancy-robust: the full 128 pool is best; keeping everything beats
+   every pruned subset. Pre-registered "prune-32 >= 0.962 beats curated-32" NOT supported —
+   pruning to 32 costs ~0.6-0.8pt acc and a lot of macro-F1/logloss.
+2. Covariance-dedup is a FREE win: 128->116 at identical accuracy — removes genuine behavioral
+   redundancy at zero cost (its designed job, confirmed on a big pool).
+3. Coverage > relevance when you must prune: cluster->medoid keeps macro-F1 0.9324 vs importance's
+   0.9178 at similar acc — importance over-prunes rare-class detectors; clustering preserves them
+   (same lesson as the 3-seed union win).
+TAKEAWAY: on TREC with an RF head and no inference-cost constraint, "generate abundance + cheap
+covariance-dedup" beats "prune hard". Aggressive pruning is a COST play (fewer encoder calls), not
+an accuracy play — and if pruning, cluster for coverage, don't rank by importance. Caveat: single
+dataset, fixed-RF head; the grid-head + multi-seed version is the confirmation (GPU/queued).
