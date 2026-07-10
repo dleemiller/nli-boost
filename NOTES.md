@@ -2315,3 +2315,29 @@ n=8 acc 0.622 → n=192 acc 0.884. PREDICTED: partial substitution — a big poo
 encoders a lot but plateaus below -l (per the channel probe, small-encoder single-head SEPARATION
 caps low, so extra hypotheses add coverage but each is a weaker feature). Calibration (logloss) vs
 pool size falls out for free (abl logs it). Figure poolsize_x_encoder_trec. Pure local, no LLM spend.
+
+## 2026-07-09 — VERDICT: pool-size × encoder-size — hypotheses do NOT substitute for capacity (complements)
+Accuracy (mean/5 seeds), pool trec_gen256, train 20/class, -l reused from abl_trec_poolsize:
+  n_hyp   -xs    -s    -m    -l
+     8  0.412 0.512 0.540 0.622
+    32  0.540 0.618 0.741 0.824
+   128  0.584 0.641 0.771 0.877
+   256  0.592 0.669 0.756 0.877
+  plateau(max): -xs 0.593  -s 0.669  -m 0.771  -l 0.884   (~0.10 apart, evenly spaced)
+The four curves are STACKED and never cross → the encoder sets a hard ceiling a bigger pool cannot
+break. ANSWER to the open thread: NO — pool size and encoder capacity are COMPLEMENTS, not
+substitutes:
+  1. Each encoder plateaus at a capacity-set ceiling (0.59/0.67/0.77/0.88); more hypotheses get you
+     TO that ceiling (front-loaded, saturates by ~32–128) but not past it.
+  2. Bigger encoders gain MORE from the same pool growth (8→256: +0.26 @-l vs +0.16–0.18 @-xs/-s) —
+     a small encoder can't exploit a rich pool (each hyp is a weaker feature; ties to the channel
+     probe's low single-head separation at small sizes). Super-additive, not substitutive.
+  3. Only a weak ~ONE-size-step partial swap at the low-pool end: big pool on -m (0.77) beats a tiny
+     pool on -l (0.62@8, 0.71@16) but never -l's plateau (0.88). A large pool ≈ the small-pool
+     performance of the next size up — nothing more.
+Calibration (logloss) tells the same story: stacked curves, -l floor 0.54 vs -xs 1.21; pool helps
+logloss to ~32 then flat. Calibration also can't be bought with pool size on a small encoder.
+REFUTES the channel-probe conjecture ("more hypotheses might substitute for capacity"): the m→l
+accuracy climb at fixed 25-hyp pool was the ENCODER, not something pool size can replicate.
+PRACTICAL: capable encoder → invest in pool size (steep to ~128); small encoder → upgrade the
+encoder first, hypotheses won't rescue it. Figure poolsize_x_encoder_trec. Pure local, no LLM spend.
