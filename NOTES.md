@@ -2299,3 +2299,16 @@ k=7 gave 0.910 (miss). k=16 ~= half the ~30 effective directions. PRE-REGISTERED
 0.910 (k=7) and 0.962 (full); success = >=0.94 (matches trec_full within ~0.02). Same source pool
 (trec_full 62) as k=7 for a clean sweep. Generate+refine+save 16 axes (network), GPU-score the new
 ones (Lee OK'd), cv head, one test eval.
+
+## 2026-07-09 — k-SWEEP VERDICT: component-summarization is interpretability, not accuracy
+PLS component-summary payoff (features=full, cv head, GPU-scored):
+  k=7  ->  7 hyps: acc 0.910  f1 0.905   logloss 0.300
+  k=16 -> 30 hyps: acc 0.952  f1 0.9345  logloss 0.2925   (refine split 16 comps -> 30 deployed)
+  refs: curated-32 0.960 | trec_full-62 0.964 | abundance-128 0.962
+READS: k=7 was over-compression; k=16 clears the pre-registered >=0.94 bar (0.952). BUT it deploys
+30 hyps (splits doubled it), and at matched count ~30 it lands BELOW directly-generated curated-32
+(0.960) and worse-calibrated (logloss 0.29 vs 0.18-0.23). VERDICT: component-summarization is a
+legitimate interpretability/compression tool (compact human-named contrastive axes at ~0.95) but
+NOT an accuracy play — at any hypothesis budget, direct generation / abundance+dedup does as well or
+better. Consistent with the abundance-prune finding (keep-all + cheap dedup > prune-hard). Line
+answered: use it when you WANT a small interpretable axis-set, not to beat the pool.
