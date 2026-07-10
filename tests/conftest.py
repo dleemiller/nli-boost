@@ -31,17 +31,20 @@ class FakeProposer:
         self.generate_calls = []
         self.refill_calls = []
 
-    def generate(self, task, class_definitions, examples, n, avoid):
-        self.generate_calls.append(dict(n=n, avoid=list(avoid)))
+    def generate(self, task, class_definitions, examples, n, avoid, opening_hints=()):
+        self.generate_calls.append(dict(n=n, avoid=list(avoid), opening_hints=list(opening_hints)))
         return self.generate_batches.pop(0) if self.generate_batches else []
 
-    def refill(self, task, class_definitions, examples, survivors, failed, confusion_evidence, n):
+    def refill(
+        self, task, class_definitions, examples, survivors, failed, confusion_evidence, n, opening_hints=()
+    ):
         self.refill_calls.append(
             dict(
                 n=n,
                 survivors=list(survivors),
                 failed=list(failed),
                 confusion_evidence=list(confusion_evidence),
+                opening_hints=list(opening_hints),
             )
         )
         return self.refill_batches.pop(0) if self.refill_batches else []

@@ -2345,3 +2345,15 @@ Keep-count is DATA-DRIVEN (effective rank grows then saturates) — answers "how
 train subsample for internal decisions. experiments/scripts/run_accordion.py = CLI (saves kept pool
 + history). tests/test_accordion.py: effective_rank, keep_representatives, fake end-to-end plateau.
 GPU-gated only for scoring each round's new hyps; queued for GPU-free. Full suite green.
+
+## 2026-07-10 — opener-diversity: mined CrossingGuard frames + wired into generation (opt-in)
+Measured the phrasing groove: 99.3% of 25k cached hyps start "The text", 32% "The text asks". Mined
+24 varied opener frames from dleemiller/CrossingGuard-NLI (prompt-classification NLI; subject
+remapped prompt->text): seeks/requests/involves/specifies/advocates/explores/... -> configs/openers.json
+(regen via openers.mine_openers). Wired as OPTIONAL `opening_hints` InputField on GeneratePool/
+RefillPool (empty for the committed method -> unchanged; only accordion opts in), stochastically
+sampled per round (openers.sample_openers, seeded). Hypothesis: more phrasing frames -> more distinct
+behavioral directions -> higher effective rank -> accordion plateaus later / covers more. Tests:
+seeded/bounded sampling + accordion passes hints. Not yet run end-to-end (needs GPU). NOTE: ruff
+flagged pre-existing lint in Bradley's experiments/scripts (diag_leaf_headroom, probe_goemotions) —
+left untouched (his files); my additions are clean.

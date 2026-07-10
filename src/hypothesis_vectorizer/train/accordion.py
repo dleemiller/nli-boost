@@ -28,6 +28,7 @@ from ..dedup import Deduper
 from ..encoder import EntailmentScorer
 from .data import Bundle, labeled_examples, stratified_indices
 from .evolve import hotspots
+from .openers import load_openers, sample_openers
 from .proposer import Proposer
 
 
@@ -91,6 +92,7 @@ def accordion(
     patience: int = 2,
     min_keep: int = 8,
     sample: int = 1000,
+    opener_hints: int = 6,
     deduper: Deduper | None = None,
 ) -> tuple[list[str], list[dict]]:
     """Expand<->compact until the kept-count stops growing. Returns (final kept pool, per-round
@@ -102,19 +104,30 @@ def accordion(
     sub_texts, sub_y = [texts[i] for i in sub], y[sub]
     examples = labeled_examples(texts, y, names, per_class=3, rng=rng)
     deduper = deduper or Deduper(scorer, sub_texts, corr_threshold=0.95)
+    openers = load_openers()  # varied opening frames; stochastically sampled per round to diversify
 
     kept: list[str] = []
     history: list[dict] = []
     prev_k, flat = 0, 0
 
     for round_i in range(rounds):
+        hints = sample_openers(openers, rng, opener_hints)  # fresh subset each round
         if not kept:  # first expand: broad generation
-            cand = proposer.generate(bundle.task, bundle.class_descriptions, examples, gen_size, avoid=[])
+            cand = proposer.generate(
+                bundle.task, bundle.class_descriptions, examples, gen_size, avoid=[], opening_hints=hints
+            )
         else:  # later expands: target the kept set's confusion, avoid paraphrasing survivors
             E_kept = scorer.features(sub_texts, kept)[:, : len(kept)]
             evidence = _confusion_evidence(kept, E_kept, sub_y, names, sub_texts, seed)
             cand = proposer.refill(
-                bundle.task, bundle.class_descriptions, examples, kept, [], evidence, n=gen_size
+                bundle.task,
+                bundle.class_descriptions,
+                examples,
+                kept,
+                [],
+                evidence,
+                n=gen_size,
+                opening_hints=hints,
             )
 
         # pool kept + new, behavioral-dedup (fresh `seen` so kept survive), then compact

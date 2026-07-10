@@ -48,3 +48,38 @@ def test_accordion_runs_and_plateaus_on_redundant_generation():
     # plateaued before exhausting all rounds (redundant refills add no new directions)
     assert len(history) < 5
     assert history[-1]["eff_rank"] <= history[-1]["deduped"]
+
+
+def test_openers_sampling_is_seeded_and_bounded():
+    import numpy as np
+
+    from hypothesis_vectorizer.train.openers import sample_openers
+
+    pool = [f"The text {v}" for v in ("seeks", "involves", "explores", "requests", "expresses")]
+    a = sample_openers(pool, np.random.default_rng(0), 3)
+    b = sample_openers(pool, np.random.default_rng(0), 3)
+    assert a == b and len(a) == 3 and all(o in pool for o in a)  # seeded + bounded + valid
+    assert sample_openers(pool, np.random.default_rng(0), 0) == []
+    assert sample_openers([], np.random.default_rng(0), 3) == []
+
+
+def test_accordion_passes_opening_hints_to_proposer():
+    bundle = make_bundle(n=200, n_features=8, n_classes=4)
+    proposer = FakeProposer(
+        generate_batches=[[f"f{i} d" for i in range(8)]], refill_batches=[[] for _ in range(3)]
+    )
+    accordion(
+        bundle,
+        FakeScorer(),
+        proposer,
+        seed=0,
+        gen_size=8,
+        rounds=2,
+        patience=1,
+        min_keep=2,
+        sample=100,
+        opener_hints=4,
+        deduper=TextOnlyDeduper(),
+    )
+    # round 0 generate() got a non-empty opener-hint subset (openers.json is checked in)
+    assert proposer.generate_calls and len(proposer.generate_calls[0]["opening_hints"]) == 4

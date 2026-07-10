@@ -62,7 +62,11 @@ class GeneratePool(dspy.Signature):
         "group B'. Use the class definitions to decide which classes belong together.\n"
         "(2) `hypotheses` — additional standalone hypotheses covering every class from multiple "
         "angles (topic, entity, intent, style, answer-oriented), as independent features.\n"
-        "Every hypothesis from BOTH becomes a feature; keep them complementary, not redundant. " + _RULES
+        "Every hypothesis from BOTH becomes a feature; keep them complementary, not redundant.\n"
+        "If `opening_hints` is non-empty, START SEVERAL hypotheses with those varied opening frames "
+        "(e.g. 'The text seeks…', 'The text involves…') to break out of the 'The text asks…' groove "
+        "and explore different semantic stances — but only where a frame FITS the meaning; never "
+        "force one. " + _RULES
     )
 
     task: str = dspy.InputField(desc="the classification task")
@@ -70,6 +74,9 @@ class GeneratePool(dspy.Signature):
     labeled_examples: list[str] = dspy.InputField(desc="sample texts with their true class")
     n: int = dspy.InputField(desc="total hypotheses to write across tree + list")
     avoid: list[str] = dspy.InputField(desc="statements already written; do not repeat or paraphrase")
+    opening_hints: list[str] = dspy.InputField(
+        desc="varied opening frames to diversify phrasing; use where they fit, ignore if empty"
+    )
     tree: list[SplitNode] = dspy.OutputField(desc="BALANCED tree splits, root first; each is group-vs-group")
     hypotheses: list[Hypothesis] = dspy.OutputField(desc="additional diverse standalone hypotheses")
 
@@ -82,7 +89,9 @@ class RefillPool(dspy.Signature):
         "paraphrase the survivors; do not repeat the failure patterns. The confusion evidence "
         "lists HOT SPOTS — groups of mutually-confused classes with several example errors each: "
         "write hypotheses for what each group's errors share, that would carve the group apart. "
-        "Never write a statement tailored to a single example's topic, entity, or wording. " + _RULES
+        "Never write a statement tailored to a single example's topic, entity, or wording.\n"
+        "If `opening_hints` is non-empty, START SEVERAL replacements with those varied opening "
+        "frames to diversify phrasing beyond 'The text asks…', where the frame fits the meaning. " + _RULES
     )
 
     task: str = dspy.InputField(desc="the classification task")
@@ -99,6 +108,9 @@ class RefillPool(dspy.Signature):
         "counts-only summaries of scattered errors"
     )
     n: int = dspy.InputField(desc="how many replacement hypotheses to write")
+    opening_hints: list[str] = dspy.InputField(
+        desc="varied opening frames to diversify phrasing; use where they fit, ignore if empty"
+    )
     hypotheses: list[Hypothesis] = dspy.OutputField()
 
 
@@ -220,11 +232,24 @@ class Proposer:
             print(f"    proposer: using tuned instruction from {cfg.instruction_path}", flush=True)
 
     def generate(
-        self, task: str, class_definitions: list[str], examples: list[str], n: int, avoid: list[str]
+        self,
+        task: str,
+        class_definitions: list[str],
+        examples: list[str],
+        n: int,
+        avoid: list[str],
+        opening_hints: list[str] = (),
     ) -> list[str]:
         return self._call(
             self._generate,
-            dict(task=task, class_definitions=class_definitions, labeled_examples=examples, n=n, avoid=avoid),
+            dict(
+                task=task,
+                class_definitions=class_definitions,
+                labeled_examples=examples,
+                n=n,
+                avoid=avoid,
+                opening_hints=list(opening_hints),
+            ),
         )
 
     def refill(
@@ -236,6 +261,7 @@ class Proposer:
         failed: list[str],
         confusion_evidence: list[str],
         n: int,
+        opening_hints: list[str] = (),
     ) -> list[str]:
         return self._call(
             self._refill,
@@ -247,6 +273,7 @@ class Proposer:
                 failed=failed,
                 confusion_evidence=confusion_evidence,
                 n=n,
+                opening_hints=list(opening_hints),
             ),
         )
 
