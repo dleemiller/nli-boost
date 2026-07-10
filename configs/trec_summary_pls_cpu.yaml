@@ -1,0 +1,12 @@
+# Payoff test on CPU (GPU held by Lee's training): score the 7 PLS-summary hyps, CV head, one eval.
+run_name: trec_summary_pls_cpu
+seed: 7
+data: {name: trec, train_size: 5452, val_size: 0, test_size: 2000}
+encoder:
+  model: dleemiller/finecat-nli-l
+  device: cpu
+  batch_size: 32
+  verbose: true
+pool:
+  from_run: trec_summary_pls
+  rounds: 0

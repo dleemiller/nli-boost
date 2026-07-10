@@ -2275,3 +2275,21 @@ TAKEAWAY: on TREC with an RF head and no inference-cost constraint, "generate ab
 covariance-dedup" beats "prune hard". Aggressive pruning is a COST play (fewer encoder calls), not
 an accuracy play — and if pruning, cluster for coverage, don't rank by importance. Caveat: single
 dataset, fixed-RF head; the grid-head + multi-seed version is the confirmation (GPU/queued).
+
+## 2026-07-09 — PLS 7-hyp summary PAYOFF: 0.910 — MISS (compression too aggressive)
+Real result (GPU-scored the 6 new axis-hyps, ~seconds; cv_selected_head grid):
+  PLS 7-hyp summary: acc 0.910, macro_f1 0.905, logloss 0.300, cv_train 0.830.
+vs pre-registered success >=0.94: MISS by ~3pt; ~5pt below trec_full-62 (0.964) / abundance-128
+(0.962). VERDICT: k=7 component-summarization loses too much — 7 dominant contrastive axes capture
+the gross class structure but drop the long tail of specific hypotheses that resolve rare/edge cases
+(consistent with prune-to-32 costing ~0.7pt and the measured ~30 effective directions). Component
+summarization is a real accuracy cost at aggressive k, not a free interpretable compression.
+OPEN: does k~24-32 axis-summaries recover accuracy (milder compression toward the effective rank)?
+That's the natural follow-up (GPU-cheap, Lee OK'd GPU for these small scoring passes).
+
+PROCESS CORRECTION (Lee caught two): (1) my "hf-inference zero-shot doesn't match local" was actually
+BART (no model= -> default) not finecat; retracted. (2) my "PLS summary is all cached, ~free" was
+wrong — 6/7 were cache MISSES; I misread the runner printing "fitting CV-selected head" BEFORE
+build_matrices scores (the CPU run was slowly SCORING, not head-fitting). Lesson: verify scores
+exist + a metrics.json was produced before claiming any result; the "fitting head" log line precedes
+scoring and must not be read as completion.
