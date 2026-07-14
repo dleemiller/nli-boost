@@ -538,3 +538,75 @@ class PriorAnchoredLogReg:
                     best, best_c = s, c
         clf = LogisticRegression(max_iter=3000, C=best_c).fit(Dtr, y_train)
         return _proba_to_full(clf, Dte, self.n_classes)
+
+
+# --------------------------------------------------------------- llm-trees induction (label-free)
+class LLMForestInduction:
+    """Route text through an LLM-written decision-tree *forest* via NLI — the induction half of
+    llm-trees (arXiv 2409.18594), label-free.
+
+    Each internal node holds an NLI hypothesis; `P(entail)` is the probability the text takes the
+    `yes` branch. routing='soft' propagates that probability (reach(yes)=p, reach(no)=1-p) and each
+    leaf contributes its class one-hot weighted by the mass reaching it — a probabilistic tree, the
+    natural fit for a soft encoder. routing='hard' thresholds p at 0.5 (the paper's hard traversal).
+    Per-tree leaf distributions are renormalized (mass that reaches a *labeled* leaf) then averaged
+    over the trees that produced any mass for that row. Uses NO labels: `run` ignores y_train.
+    """
+
+    def __init__(self, n_classes: int, forest, class_names: list[str], featurizer: NLIFeaturizer,
+                 routing: str = "soft", name: str | None = None):
+        from hypothesis_vectorizer.dedup import norm_statement
+
+        from .forest import flatten_conditions
+
+        assert routing in ("soft", "hard")
+        self.n_classes = n_classes
+        self.forest = forest
+        self.fz = featurizer
+        self.routing = routing
+        self.name = name or f"llm_forest_induction_{routing}"
+        self._classidx = {c: i for i, c in enumerate(class_names)}
+        self._conditions = flatten_conditions(forest)  # unique, stable order
+        self._colmap = {norm_statement(c): j for j, c in enumerate(self._conditions)}
+
+    def _route(self, node, E, reach, out) -> None:
+        from hypothesis_vectorizer.dedup import norm_statement
+
+        if node is None:
+            return
+        internal = node.condition is not None and (node.yes is not None or node.no is not None)
+        if not internal:  # leaf (or dead node) — deposit mass on its class if it names a known one
+            ci = self._classidx.get((node.leaf_class or "").strip())
+            if ci is not None:
+                out[:, ci] += reach
+            return
+        col = self._colmap.get(norm_statement(node.condition))
+        if col is None:  # condition somehow unscored — cannot branch; treat as labeled leaf if any
+            ci = self._classidx.get((node.leaf_class or "").strip())
+            if ci is not None:
+                out[:, ci] += reach
+            return
+        p = E[:, col]
+        if self.routing == "hard":
+            p = (p >= 0.5).astype(float)
+        self._route(node.yes, E, reach * p, out)
+        self._route(node.no, E, reach * (1.0 - p), out)
+
+    def run(self, train_texts, y_train, test_texts) -> np.ndarray:
+        n = len(test_texts)
+        E = (self.fz.features(test_texts, self._conditions, "entail")
+             if self._conditions else np.zeros((n, 0)))
+        acc = np.zeros((n, self.n_classes), dtype=float)
+        contributing = np.zeros(n, dtype=float)  # trees that routed any mass, per row
+        for tree in self.forest:
+            out = np.zeros((n, self.n_classes), dtype=float)
+            self._route(tree, E, np.ones(n), out)
+            mass = out.sum(axis=1)  # mass that reached a labeled leaf
+            hit = mass > 0
+            out[hit] /= mass[hit, None]  # per-tree class distribution
+            acc[hit] += out[hit]
+            contributing[hit] += 1.0
+        ok = contributing > 0
+        acc[ok] /= contributing[ok, None]
+        acc[~ok] = 1.0 / self.n_classes  # no tree could route this row -> uniform
+        return acc

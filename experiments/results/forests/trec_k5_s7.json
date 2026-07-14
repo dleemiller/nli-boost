@@ -1,0 +1,167 @@
+[
+  {
+    "condition": "The text can be answered with a number, date, or numeric value.",
+    "yes": {
+      "leaf_class": "NUM"
+    },
+    "no": {
+      "condition": "The text asks for a person, group, or organization.",
+      "yes": {
+        "leaf_class": "HUM"
+      },
+      "no": {
+        "condition": "The text asks for a place or location.",
+        "yes": {
+          "leaf_class": "LOC"
+        },
+        "no": {
+          "condition": "The text asks what an abbreviation or acronym stands for.",
+          "yes": {
+            "leaf_class": "ABBR"
+          },
+          "no": {
+            "condition": "The text asks for a definition, explanation, or description of something.",
+            "yes": {
+              "leaf_class": "DESC"
+            },
+            "no": {
+              "leaf_class": "ENTY"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "condition": "The text is equivalent to asking for a number or numeric value.",
+    "yes": {
+      "leaf_class": "NUM"
+    },
+    "no": {
+      "condition": "The text is equivalent to asking for a person, group, or organization.",
+      "yes": {
+        "leaf_class": "HUM"
+      },
+      "no": {
+        "condition": "The text is equivalent to asking for a place or location.",
+        "yes": {
+          "leaf_class": "LOC"
+        },
+        "no": {
+          "condition": "The text is equivalent to asking what an abbreviation or acronym stands for.",
+          "yes": {
+            "leaf_class": "ABBR"
+          },
+          "no": {
+            "condition": "The text is equivalent to asking for a definition, explanation, or description of something.",
+            "yes": {
+              "leaf_class": "DESC"
+            },
+            "no": {
+              "leaf_class": "ENTY"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "condition": "The text is equivalent to asking for a number or numeric value, or for a date or time.",
+    "yes": {
+      "leaf_class": "NUM"
+    },
+    "no": {
+      "condition": "The text is equivalent to asking for a person, group, or organization.",
+      "yes": {
+        "leaf_class": "HUM"
+      },
+      "no": {
+        "condition": "The text is equivalent to asking for a place or location.",
+        "yes": {
+          "leaf_class": "LOC"
+        },
+        "no": {
+          "condition": "The text is equivalent to asking what an abbreviation or acronym stands for.",
+          "yes": {
+            "leaf_class": "ABBR"
+          },
+          "no": {
+            "condition": "The text is equivalent to asking for a definition, explanation, or description of something.",
+            "yes": {
+              "leaf_class": "DESC"
+            },
+            "no": {
+              "leaf_class": "ENTY"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "condition": "The text is equivalent to asking for a specific named entity \u2014 a thing, person, place, or abbreviation \u2014 rather than a description or number.",
+    "yes": {
+      "condition": "The text is equivalent to asking for a person, group, or organization.",
+      "yes": {
+        "leaf_class": "HUM"
+      },
+      "no": {
+        "condition": "The text is equivalent to asking for a place or location.",
+        "yes": {
+          "leaf_class": "LOC"
+        },
+        "no": {
+          "condition": "The text is equivalent to asking what an abbreviation or acronym stands for.",
+          "yes": {
+            "leaf_class": "ABBR"
+          },
+          "no": {
+            "leaf_class": "ENTY"
+          }
+        }
+      }
+    },
+    "no": {
+      "condition": "The text is equivalent to asking for a number or numeric value.",
+      "yes": {
+        "leaf_class": "NUM"
+      },
+      "no": {
+        "leaf_class": "DESC"
+      }
+    }
+  },
+  {
+    "condition": "The text can be answered with a single proper name or term.",
+    "yes": {
+      "condition": "The text refers to a human being or an organized group of people.",
+      "yes": {
+        "leaf_class": "HUM"
+      },
+      "no": {
+        "condition": "The text refers to a specific location or place.",
+        "yes": {
+          "leaf_class": "LOC"
+        },
+        "no": {
+          "condition": "The text is asking for the full form or meaning of an abbreviation.",
+          "yes": {
+            "leaf_class": "ABBR"
+          },
+          "no": {
+            "leaf_class": "ENTY"
+          }
+        }
+      }
+    },
+    "no": {
+      "condition": "The text is requesting a numerical measure or quantitative value.",
+      "yes": {
+        "leaf_class": "NUM"
+      },
+      "no": {
+        "leaf_class": "DESC"
+      }
+    }
+  }
+]

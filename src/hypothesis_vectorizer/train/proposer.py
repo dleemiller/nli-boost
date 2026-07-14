@@ -47,6 +47,23 @@ class SplitNode(BaseModel):
     hypotheses: list[str]
 
 
+class TreeNode(BaseModel):
+    """A full, TRAVERSABLE classification tree (unlike SplitNode's flat depth-ordered split list).
+
+    Internal node: `condition` is an NLI hypothesis about the text; the `yes` subtree is taken when
+    the text ENTAILS it, `no` otherwise. Leaf: `leaf_class` names the predicted class and
+    condition/yes/no are null. Used by the llm-trees-style forest (induction + embedding), not by
+    the flat-pool generation path."""
+
+    condition: str | None = None
+    yes: "TreeNode | None" = None
+    no: "TreeNode | None" = None
+    leaf_class: str | None = None
+
+
+TreeNode.model_rebuild()  # resolve the self-referential forward refs for dspy schema generation
+
+
 class GeneratePool(dspy.Signature):
     __doc__ = (
         "Write hypotheses for a natural-language-inference model that will check, for each input "
@@ -79,6 +96,27 @@ class GeneratePool(dspy.Signature):
     )
     tree: list[SplitNode] = dspy.OutputField(desc="BALANCED tree splits, root first; each is group-vs-group")
     hypotheses: list[Hypothesis] = dspy.OutputField(desc="additional diverse standalone hypotheses")
+
+
+class GenerateTree(dspy.Signature):
+    __doc__ = (
+        "Build a DECISION TREE that classifies the input text zero-shot from the class definitions. "
+        "Each INTERNAL node holds ONE hypothesis about the text (`condition`); the `yes` branch is "
+        "taken when the text ENTAILS the condition and the `no` branch when it does not. Recurse "
+        "until every branch reaches a LEAF, which sets `leaf_class` to the predicted class name and "
+        "leaves `condition`/`yes`/`no` null. Build a COMPACT, roughly balanced tree that can reach "
+        "EVERY class: at the root split the full class set into two groups with a condition true for "
+        "one group and false for the other, then recurse on each group (coarsest distinction first). "
+        "A class may appear at more than one leaf if two branches both resolve to it. Do NOT reuse a "
+        "condition listed in `avoid` — write a genuinely different tree that reads other properties. "
+        + _RULES
+    )
+
+    task: str = dspy.InputField(desc="the classification task")
+    class_definitions: list[str] = dspy.InputField(desc="one-line definition per class")
+    labeled_examples: list[str] = dspy.InputField(desc="sample texts with their true class")
+    avoid: list[str] = dspy.InputField(desc="conditions from earlier trees; do not repeat or paraphrase")
+    tree: TreeNode = dspy.OutputField(desc="a traversable decision tree; internal nodes are hypotheses, leaves name a class")
 
 
 class RefillPool(dspy.Signature):
@@ -222,6 +260,7 @@ class Proposer:
         self._lm = _make_lm(cfg)
         self._retry_lm = None  # built on first failure
         self._generate = dspy.Predict(GeneratePool)
+        self._generate_tree = dspy.Predict(GenerateTree)
         self._refill = dspy.Predict(RefillPool)
         self._split = dspy.Predict(SplitLeaf)
         if cfg.instruction_path:  # swap in a GEPA-tuned GeneratePool instruction
@@ -251,6 +290,31 @@ class Proposer:
                 opening_hints=list(opening_hints),
             ),
         )
+
+    def generate_tree(
+        self, task: str, class_definitions: list[str], examples: list[str], avoid: list[str]
+    ) -> "TreeNode | None":
+        """Propose ONE traversable decision tree (internal nodes = hypotheses, leaves = classes).
+
+        Returns the parsed `TreeNode`, or None if both the primary and the no-reasoning retry fail —
+        a dead tree is dropped from the forest, never crashes the run (mirrors `_call`)."""
+        inputs = dict(
+            task=task, class_definitions=class_definitions, labeled_examples=examples, avoid=avoid
+        )
+        for attempt in range(2):
+            lm = self._lm if attempt == 0 else self._get_retry_lm()
+            n_before = len(lm.history)
+            try:
+                with dspy.context(lm=lm):
+                    result = self._generate_tree(**inputs)
+                tree = getattr(result, "tree", None)
+                if tree is not None:
+                    return tree
+            except Exception as e:  # LM/parse pathologies must not kill a run
+                print(f"    tree proposal failed ({type(e).__name__}), attempt {attempt + 1}/2", flush=True)
+            finally:
+                self._track(lm, n_before)
+        return None
 
     def refill(
         self,

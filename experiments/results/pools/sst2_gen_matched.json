@@ -1,0 +1,26 @@
+[
+  {
+    "text": "The text expresses a negative opinion.",
+    "intended_class": "negative"
+  },
+  {
+    "text": "The text describes a disappointing experience.",
+    "intended_class": "negative"
+  },
+  {
+    "text": "The text conveys a positive sentiment.",
+    "intended_class": "positive"
+  },
+  {
+    "text": "The text contains words that indicate approval or praise.",
+    "intended_class": "positive"
+  },
+  {
+    "text": "The text criticizes the subject's quality.",
+    "intended_class": "negative"
+  },
+  {
+    "text": "The text uses a positive tone.",
+    "intended_class": "positive"
+  }
+]

@@ -1,10 +1,10 @@
 {
-  "run_id": "trec_gen256",
-  "created_utc": "2026-07-07T13:13:35Z",
-  "git_commit": "5bac60f",
+  "run_id": "goemotions_gen_matched",
+  "created_utc": "2026-07-10T13:23:06Z",
+  "git_commit": "f48c5ac-dirty",
   "config": {
-    "dataset": "trec",
-    "n": 256,
+    "dataset": "goemotions",
+    "n": 30,
     "sample_per_class": 3,
     "seed": 7,
     "encoder": "dleemiller/finecat-nli-l",
@@ -13,13 +13,13 @@
     "dedup": "sts",
     "evolve": false,
     "tag": true,
-    "out": "experiments/results/pools/trec_gen256.json"
+    "out": "experiments/results/pools/goemotions_gen_matched.json"
   },
-  "config_hash": "c70f6ecda7e3",
+  "config_hash": "bdc691b472ed",
   "seed": 7,
-  "dataset": "trec",
+  "dataset": "goemotions",
   "encoder": "dleemiller/finecat-nli-l",
-  "pool_id": "trec_gen256",
+  "pool_id": "goemotions_gen_matched",
   "libraries": {
     "python": "3.13.9",
     "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.39",
@@ -32,9 +32,9 @@
     "datasets": "5.0.0",
     "cuda": "NVIDIA GeForce RTX 5090"
   },
-  "n_generated": 256,
-  "gen_seconds": 476.8,
-  "sample_texts": 18,
+  "n_generated": 30,
+  "gen_seconds": 138.2,
+  "sample_texts": 21,
   "lm": "openrouter/deepseek/deepseek-v4-flash",
   "evolve": false
 }

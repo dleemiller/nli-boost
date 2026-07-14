@@ -1,0 +1,197 @@
+[
+  {
+    "condition": "The text expresses a strong emotion.",
+    "yes": {
+      "condition": "The text expresses a positive emotion.",
+      "yes": {
+        "leaf_class": "joy"
+      },
+      "no": {
+        "condition": "The text expresses surprise or astonishment.",
+        "yes": {
+          "leaf_class": "surprise"
+        },
+        "no": {
+          "condition": "The text expresses anger or disgust.",
+          "yes": {
+            "condition": "The text expresses anger or hostility.",
+            "yes": {
+              "leaf_class": "anger"
+            },
+            "no": {
+              "leaf_class": "disgust"
+            }
+          },
+          "no": {
+            "condition": "The text expresses fear or anxiety.",
+            "yes": {
+              "leaf_class": "fear"
+            },
+            "no": {
+              "leaf_class": "sadness"
+            }
+          }
+        }
+      }
+    },
+    "no": {
+      "leaf_class": "neutral"
+    }
+  },
+  {
+    "condition": "The text expresses a negative feeling or discontent.",
+    "yes": {
+      "condition": "The text conveys disgust or revulsion.",
+      "yes": {
+        "leaf_class": "disgust"
+      },
+      "no": {
+        "condition": "The text conveys a sense of threat or danger.",
+        "yes": {
+          "leaf_class": "fear"
+        },
+        "no": {
+          "condition": "The text indicates irritation or blame.",
+          "yes": {
+            "leaf_class": "anger"
+          },
+          "no": {
+            "leaf_class": "sadness"
+          }
+        }
+      }
+    },
+    "no": {
+      "condition": "The text conveys a happy or grateful sentiment.",
+      "yes": {
+        "leaf_class": "joy"
+      },
+      "no": {
+        "condition": "The text describes an unexpected event or reaction.",
+        "yes": {
+          "leaf_class": "surprise"
+        },
+        "no": {
+          "leaf_class": "neutral"
+        }
+      }
+    }
+  },
+  {
+    "condition": "The text is primarily informative or explanatory.",
+    "yes": {
+      "leaf_class": "neutral"
+    },
+    "no": {
+      "condition": "The text shows approval or admiration.",
+      "yes": {
+        "leaf_class": "joy"
+      },
+      "no": {
+        "condition": "The text condemns or denounces something.",
+        "yes": {
+          "condition": "The text expresses a visceral negative reaction.",
+          "yes": {
+            "leaf_class": "disgust"
+          },
+          "no": {
+            "leaf_class": "anger"
+          }
+        },
+        "no": {
+          "condition": "The text describes a fearful reaction.",
+          "yes": {
+            "leaf_class": "fear"
+          },
+          "no": {
+            "condition": "The text expresses confusion or disbelief.",
+            "yes": {
+              "leaf_class": "surprise"
+            },
+            "no": {
+              "leaf_class": "sadness"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "condition": "The text is equivalent to a negative response to something.",
+    "yes": {
+      "condition": "The text is equivalent to expressing a specific concern about a situation.",
+      "yes": {
+        "leaf_class": "fear"
+      },
+      "no": {
+        "condition": "The text expresses disappointment or regret.",
+        "yes": {
+          "leaf_class": "sadness"
+        },
+        "no": {
+          "condition": "The text is directed at a specific person.",
+          "yes": {
+            "leaf_class": "anger"
+          },
+          "no": {
+            "leaf_class": "disgust"
+          }
+        }
+      }
+    },
+    "no": {
+      "condition": "The text offers a compliment or praise.",
+      "yes": {
+        "leaf_class": "joy"
+      },
+      "no": {
+        "condition": "The text provides information without expressing opinion.",
+        "yes": {
+          "leaf_class": "neutral"
+        },
+        "no": {
+          "leaf_class": "surprise"
+        }
+      }
+    }
+  },
+  {
+    "condition": "The text is equivalent to praising or expressing admiration.",
+    "yes": {
+      "leaf_class": "joy"
+    },
+    "no": {
+      "condition": "The text is equivalent to a complaint or condemnation.",
+      "yes": {
+        "condition": "The text blames someone for something.",
+        "yes": {
+          "leaf_class": "anger"
+        },
+        "no": {
+          "leaf_class": "disgust"
+        }
+      },
+      "no": {
+        "condition": "The text describes something that frightens or worries the speaker.",
+        "yes": {
+          "leaf_class": "fear"
+        },
+        "no": {
+          "condition": "The text conveys a sense of loss or unhappiness.",
+          "yes": {
+            "leaf_class": "sadness"
+          },
+          "no": {
+            "condition": "The text expresses amazement or bewilderment.",
+            "yes": {
+              "leaf_class": "surprise"
+            },
+            "no": {
+              "leaf_class": "neutral"
+            }
+          }
+        }
+      }
+    }
+  }
+]

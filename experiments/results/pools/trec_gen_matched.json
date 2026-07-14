@@ -1,0 +1,70 @@
+[
+  {
+    "text": "The text asks for a single, specific fact such as a number, entity name, or abbreviation.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a description, a person, or a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text expects a response that is a number or an abbreviation.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a specific thing or object.",
+    "intended_class": "ENTY"
+  },
+  {
+    "text": "The text asks for a named person or place.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks for a definition, explanation, or reason.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks what an abbreviation stands for.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text asks for a numeric value.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks about a person or group.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text asks about a location.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be answered by stating the meaning of an abbreviation.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text can be answered by naming a specific thing, animal, or concept.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text requires a definition or explanation in full sentences.",
+    "intended_class": "ABBR"
+  },
+  {
+    "text": "The text can be answered with a person's name or the name of an organization.",
+    "intended_class": "HUM"
+  },
+  {
+    "text": "The text can be answered with a place name.",
+    "intended_class": "LOC"
+  },
+  {
+    "text": "The text can be answered with a numerical figure.",
+    "intended_class": "NUM"
+  },
+  {
+    "text": "The text asks for a named entity (a person, place, or thing).",
+    "intended_class": "HUM"
+  }
+]

@@ -1,0 +1,53 @@
+[
+  {
+    "condition": "The text conveys a negative sentiment.",
+    "yes": {
+      "leaf_class": "negative"
+    },
+    "no": {
+      "leaf_class": "positive"
+    }
+  },
+  {
+    "condition": "The text expresses praise or enjoyment.",
+    "yes": {
+      "leaf_class": "positive"
+    },
+    "no": {
+      "leaf_class": "negative"
+    }
+  },
+  {
+    "condition": "The text contains the word 'outstanding', 'perfect', or 'fun'.",
+    "yes": {
+      "leaf_class": "positive"
+    },
+    "no": {
+      "leaf_class": "negative"
+    }
+  },
+  {
+    "condition": "The text describes a specific flaw in the movie.",
+    "yes": {
+      "leaf_class": "negative"
+    },
+    "no": {
+      "leaf_class": "positive"
+    }
+  },
+  {
+    "condition": "The text recommends the movie.",
+    "yes": {
+      "leaf_class": "positive"
+    },
+    "no": {
+      "condition": "The text contains a positive adjective.",
+      "yes": {
+        "leaf_class": "positive"
+      },
+      "no": {
+        "leaf_class": "negative"
+      }
+    }
+  }
+]

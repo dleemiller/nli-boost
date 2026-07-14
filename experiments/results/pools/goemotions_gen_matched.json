@@ -1,0 +1,122 @@
+[
+  {
+    "text": "The text conveys anger, disgust, fear, or sadness.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text expresses anger or disgust.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text expresses joy or happiness.",
+    "intended_class": "joy"
+  },
+  {
+    "text": "The text expresses anger.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text expresses fear.",
+    "intended_class": "fear"
+  },
+  {
+    "text": "The text expresses surprise.",
+    "intended_class": "fear"
+  },
+  {
+    "text": "The text contains a complaint or criticism.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text expresses gratitude or thanks.",
+    "intended_class": "joy"
+  },
+  {
+    "text": "The text conveys a sense of danger or threat.",
+    "intended_class": "fear"
+  },
+  {
+    "text": "The text is a factual observation without emotion.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text uses an exclamation mark or multiple exclamation marks.",
+    "intended_class": "surprise"
+  },
+  {
+    "text": "The text expresses disappointment.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text is equivalent to asking a question.",
+    "intended_class": "sadness"
+  },
+  {
+    "text": "The text expresses amusement or laughter.",
+    "intended_class": "anger"
+  },
+  {
+    "text": "The text conveys confusion or uncertainty.",
+    "intended_class": "sadness"
+  },
+  {
+    "text": "The text contains a personal opinion.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text expresses admiration.",
+    "intended_class": "joy"
+  },
+  {
+    "text": "The text is equivalent to making a request.",
+    "intended_class": "anger"
+  },
+  {
+    "text": "The text expresses frustration.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text describes a personal experience.",
+    "intended_class": "fear"
+  },
+  {
+    "text": "The text uses sarcasm.",
+    "intended_class": "surprise"
+  },
+  {
+    "text": "The text conveys a sense of relief.",
+    "intended_class": "joy"
+  },
+  {
+    "text": "The text is equivalent to giving an order or command.",
+    "intended_class": "surprise"
+  },
+  {
+    "text": "The text expresses revulsion.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text is equivalent to expressing disbelief.",
+    "intended_class": "sadness"
+  },
+  {
+    "text": "The text expresses resentment.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text is a short, blunt statement.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text contains a reference to something gross or offensive.",
+    "intended_class": "disgust"
+  },
+  {
+    "text": "The text expresses a sense of worry or anxiety.",
+    "intended_class": "fear"
+  },
+  {
+    "text": "The text is equivalent to stating a fact.",
+    "intended_class": "sadness"
+  }
+]

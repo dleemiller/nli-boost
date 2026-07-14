@@ -1,0 +1,228 @@
+{
+  "args": {
+    "datasets": [
+      "trec",
+      "sst2",
+      "goemotions"
+    ],
+    "n_trees": 5,
+    "budgets": [
+      "5",
+      "20",
+      "100",
+      "all"
+    ],
+    "seeds": [
+      7,
+      17,
+      23
+    ],
+    "sample_per_class": 3,
+    "seed": 7,
+    "encoder": "dleemiller/finecat-nli-l",
+    "device": "cuda",
+    "lm": "openrouter/deepseek/deepseek-v4-flash",
+    "flat_pool": "experiments/results/pools/{ds}_gen_static.json",
+    "regen": false,
+    "dry_run": false,
+    "out": "experiments/results/raw/llm_forest.json"
+  },
+  "results": {
+    "trec": {
+      "n_classes": 6,
+      "n_conditions": 17,
+      "label_free": {
+        "zeroshot_nli": {
+          "acc": 0.428,
+          "f1": 0.3953894870561537
+        },
+        "prior_fixed": {
+          "acc": 0.594,
+          "f1": 0.5941454182465034
+        },
+        "forest_induction_soft": {
+          "acc": 0.486,
+          "f1": 0.46495717912289897
+        },
+        "forest_induction_hard": {
+          "acc": 0.472,
+          "f1": 0.4543630718854887
+        }
+      },
+      "learned": {
+        "forest_embed": {
+          "5": {
+            "acc_mean": 0.7326666666666668,
+            "acc_std": 0.058202710895245736,
+            "seeds": 3
+          },
+          "20": {
+            "acc_mean": 0.7686666666666667,
+            "acc_std": 0.06693944195232646,
+            "seeds": 3
+          },
+          "100": {
+            "acc_mean": 0.9053333333333334,
+            "acc_std": 0.00659966329107445,
+            "seeds": 3
+          },
+          "all": {
+            "acc_mean": 0.9486666666666667,
+            "acc_std": 0.0037712361663282566,
+            "seeds": 3
+          }
+        },
+        "flat_pool_embed": {
+          "5": {
+            "acc_mean": 0.7633333333333333,
+            "acc_std": 0.0471687278701566,
+            "seeds": 3
+          },
+          "20": {
+            "acc_mean": 0.8006666666666665,
+            "acc_std": 0.06859219262342392,
+            "seeds": 3
+          },
+          "100": {
+            "acc_mean": 0.9233333333333333,
+            "acc_std": 0.009977753031397186,
+            "seeds": 3
+          },
+          "all": {
+            "acc_mean": 0.9540000000000001,
+            "acc_std": 0.0016329931618554536,
+            "seeds": 3
+          }
+        }
+      },
+      "seconds": 4931.5,
+      "cost": {
+        "lm_calls": 0,
+        "lm_input_tokens": 0,
+        "lm_output_tokens": 0,
+        "lm_usd": 0.0,
+        "lm_abnormal_finishes": 0,
+        "encoder_pairs_requested": 1559684,
+        "encoder_cache_hits": 1052799,
+        "encoder_gpu_pairs": 492386,
+        "wall_seconds": 5172.7
+      }
+    },
+    "sst2": {
+      "n_classes": 2,
+      "n_conditions": 6,
+      "label_free": {
+        "zeroshot_nli": {
+          "acc": 0.9472477064220184,
+          "f1": 0.9472407679235654
+        },
+        "prior_fixed": {
+          "acc": 0.9529816513761468,
+          "f1": 0.9529786212656264
+        },
+        "forest_induction_soft": {
+          "acc": 0.9357798165137615,
+          "f1": 0.9357798165137615
+        },
+        "forest_induction_hard": {
+          "acc": 0.9311926605504587,
+          "f1": 0.9311922985875483
+        }
+      },
+      "learned": {
+        "forest_embed": {
+          "5": {
+            "acc_mean": 0.9376911314984709,
+            "acc_std": 0.001081203029337196,
+            "seeds": 3
+          },
+          "20": {
+            "acc_mean": 0.9288990825688073,
+            "acc_std": 0.0018726985801094521,
+            "seeds": 3
+          },
+          "100": {
+            "acc_mean": 0.9438073394495413,
+            "acc_std": 0.006554445030383132,
+            "seeds": 3
+          },
+          "all": {
+            "acc_mean": 0.9491590214067278,
+            "acc_std": 0.0014302971661979862,
+            "seeds": 3
+          }
+        }
+      },
+      "seconds": 2148.1,
+      "cost": {
+        "lm_calls": 0,
+        "lm_input_tokens": 0,
+        "lm_output_tokens": 0,
+        "lm_usd": 0.0,
+        "lm_abnormal_finishes": 0,
+        "encoder_pairs_requested": 1230734,
+        "encoder_cache_hits": 808236,
+        "encoder_gpu_pairs": 418016,
+        "wall_seconds": 2389.8
+      }
+    },
+    "goemotions": {
+      "n_classes": 7,
+      "n_conditions": 30,
+      "label_free": {
+        "zeroshot_nli": {
+          "acc": 0.31915957978989495,
+          "f1": 0.2807171037572765
+        },
+        "prior_fixed": {
+          "acc": 0.32016008004002,
+          "f1": 0.2526327508827392
+        },
+        "forest_induction_soft": {
+          "acc": 0.3171585792896448,
+          "f1": 0.20026173468512562
+        },
+        "forest_induction_hard": {
+          "acc": 0.3306653326663332,
+          "f1": 0.20799736742287595
+        }
+      },
+      "learned": {
+        "forest_embed": {
+          "5": {
+            "acc_mean": 0.4015341003835251,
+            "acc_std": 0.04130287790776516,
+            "seeds": 3
+          },
+          "20": {
+            "acc_mean": 0.4994163748540938,
+            "acc_std": 0.0091909379886748,
+            "seeds": 3
+          },
+          "100": {
+            "acc_mean": 0.5396031349007838,
+            "acc_std": 0.014734515280556625,
+            "seeds": 3
+          },
+          "all": {
+            "acc_mean": 0.6451559112889779,
+            "acc_std": 0.0038605425722161844,
+            "seeds": 3
+          }
+        }
+      },
+      "seconds": 5182.6,
+      "cost": {
+        "lm_calls": 0,
+        "lm_input_tokens": 0,
+        "lm_output_tokens": 0,
+        "lm_usd": 0.0,
+        "lm_abnormal_finishes": 0,
+        "encoder_pairs_requested": 3748446,
+        "encoder_cache_hits": 2454588,
+        "encoder_gpu_pairs": 1282032,
+        "wall_seconds": 5898.3
+      }
+    }
+  }
+}

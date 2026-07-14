@@ -457,4 +457,44 @@ the best config on this task, i.e. HV + TF-IDF + metadata together.
 prep_cfpb.py gained `--baseline {tabular,tabular_tfidf}` and `--from-csv` (regenerate a pool on
 existing rows without re-streaming).
 
+## Phase 12 — llm-trees forest: zero-shot LLM decision-tree induction vs embedding (2026-07-10)
+
+Adapts "Oh LLM, I'm Asking Thee, Please Give Me a Decision Tree" (Knauer/Koddenbrock et al., KDD
+'25; arXiv 2409.18594) to the text/NLI regime. An LLM writes a forest of K=5 traversable trees
+(internal node = an NLI hypothesis, leaf = a class; `deepseek-v4-flash`, temp 1.0, avoid-seeded).
+Two uses, mirroring the paper: **induction** (route text through the trees via NLI, label-free) and
+**embedding** (flatten node conditions into a pool → learned head). Code: `experiments/hvexp/
+forest.py`, `LLMForestInduction` in `systems.py`, script `experiments/scripts/llm_forest.py`.
+Encoder finecat-nli-l; learned heads mean over seeds {7,17,23}; McNemar at k=all, seed 7.
+
+**Controls are size-matched:** the flat_pool_embed control is a flat generated pool at the SAME
+target size as the forest's conditions (TREC 17, SST-2 6, GoEmotions 30), same train sample/seed —
+so forest-vs-flat isolates the *structure of generation*, not pool size.
+
+| dataset | zeroshot | prior | induction (soft/hard) | forest_embed (k=all) | flat_pool_embed (k=all) |
+|---|---|---|---|---|---|
+| TREC (6c, 17 conds) | .428 | .594 | .486 / .472 | .945 | .948 |
+| SST-2 (2c, 6 conds) | .947 | .953 | .936 / .931 | .949 | .952 |
+| GoEmotions (7c, 30 conds) | .319 | .320 | .317 / .331 | .645 | .671 |
+
+**Verdict (vs pre-registration):**
+- ✅ **Embedding ≫ induction, significant on all three** — McNemar p=0.000 (TREC, disc 234/5),
+  p=0.024 (SST-2, 21/8), p=0.000 (GoEmotions, 753/93). The llm-trees headline replicates in
+  text/NLI: routing text through the LLM trees is near the zero-shot floor, while using their node
+  conditions as a feature basis climbs far above.
+- ❌ **forest_embed never beats flat_pool_embed** at matched size — TREC p=0.839 (tie), SST-2
+  p=1.000 (tie), GoEmotions **p=0.047 in FLAT's favor** (flat 129 vs forest 164... i.e. flat fixes
+  more). The **promotion criterion (forest > flat on ≥2/3) is NOT met** → no production
+  `pool.method="forest"`. The earlier "compression" read (forest 17 conds ≈ flat 64) dissolves
+  once sizes are matched: a flat pool at size 17 does equally well or better.
+- Induction beats single-template zeroshot only on TREC (.486 vs .428) and loses to the prior head
+  (.594); on prior-saturated SST-2 and hard GoEmotions the label-free anchors tie.
+
+**Conclusion — reinforces the paper thesis:** the LLM tree *structure* (as classifier or as a
+generation scaffold) is not the lever; its hypotheses as a frozen-NLI feature basis are. Filed as a
+replicated cross-domain negative + a §5.1 label-free induction row + a §5.2 note. On the hard 7-way
+task, forcing hierarchical group-splits is mildly *worse* than free-form flat generation (GoEmotions
+p=0.047), consistent with generation diversity mattering more than imposed structure. Assets:
+`experiments/results/forests/*.json`, `pools/{ds}_gen_matched.json`, `raw/llm_forest_matched.json`.
+
 _(Further phases appended as they run.)_
